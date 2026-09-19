@@ -36,7 +36,9 @@ import {
   BookOpen,
   Users,
   ShieldCheck,
-  UserCheck
+  UserCheck,
+  Trash2,
+  RotateCcw
 } from 'lucide-react';
 
 export default function App() {
@@ -97,14 +99,14 @@ export default function App() {
 
       if (savedProducts) setProducts(JSON.parse(savedProducts));
       else {
-        setProducts(INITIAL_PRODUCTS);
-        localStorage.setItem('jm_products', JSON.stringify(INITIAL_PRODUCTS));
+        setProducts([]);
+        localStorage.setItem('jm_products', JSON.stringify([]));
       }
 
       if (savedCustomers) setCustomers(JSON.parse(savedCustomers));
       else {
-        setCustomers(INITIAL_CUSTOMERS);
-        localStorage.setItem('jm_customers', JSON.stringify(INITIAL_CUSTOMERS));
+        setCustomers([]);
+        localStorage.setItem('jm_customers', JSON.stringify([]));
       }
 
       if (savedDocuments) {
@@ -120,8 +122,8 @@ export default function App() {
         });
         setDocuments(migratedDocs);
       } else {
-        setDocuments(INITIAL_DOCUMENTS);
-        localStorage.setItem('jm_documents', JSON.stringify(INITIAL_DOCUMENTS));
+        setDocuments([]);
+        localStorage.setItem('jm_documents', JSON.stringify([]));
       }
 
       if (savedSettings) {
@@ -210,6 +212,32 @@ export default function App() {
   const saveSettingsToDb = (newSettings: BusinessSettings) => {
     setSettings(newSettings);
     localStorage.setItem('jm_settings', JSON.stringify(newSettings));
+  };
+
+  // Clear All Data Handler (for fresh entry)
+  const handleClearAllData = () => {
+    if (window.confirm("Are you sure you want to clear ALL documents, inventory items, and customer records? This will delete all sample data so you can start fresh.")) {
+      setProducts([]);
+      setCustomers([]);
+      setDocuments([]);
+      localStorage.setItem('jm_products', JSON.stringify([]));
+      localStorage.setItem('jm_customers', JSON.stringify([]));
+      localStorage.setItem('jm_documents', JSON.stringify([]));
+      alert("Database cleared successfully! You can now start entering your own products, customers, and documents.");
+    }
+  };
+
+  // Restore Sample Demo Data Handler
+  const handleRestoreSampleData = () => {
+    if (window.confirm("Restore sample demo products, customers, and documents?")) {
+      setProducts(INITIAL_PRODUCTS);
+      setCustomers(INITIAL_CUSTOMERS);
+      setDocuments(INITIAL_DOCUMENTS);
+      localStorage.setItem('jm_products', JSON.stringify(INITIAL_PRODUCTS));
+      localStorage.setItem('jm_customers', JSON.stringify(INITIAL_CUSTOMERS));
+      localStorage.setItem('jm_documents', JSON.stringify(INITIAL_DOCUMENTS));
+      alert("Sample demo data restored successfully!");
+    }
   };
 
   // HANDLERS FOR INVENTORY / PRODUCTS
@@ -595,11 +623,12 @@ export default function App() {
 
                   {/* TAB PANEL 5: Business Settings Editor */}
                   {activeTab === 'settings' && (
-                    <div className="max-w-2xl bg-white border border-slate-200 rounded-2xl p-6 shadow-2xs space-y-6">
-                      <div className="border-b border-slate-100 pb-4">
-                        <h3 className="text-sm font-bold text-slate-900 font-display">Manage Showroom Metadata</h3>
-                        <p className="text-slate-400 text-[11px] mt-0.5">Customize corporate phone numbers, prefixes, and default print guidelines.</p>
-                      </div>
+                    <div className="max-w-2xl space-y-6">
+                      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-2xs space-y-6">
+                        <div className="border-b border-slate-100 pb-4">
+                          <h3 className="text-sm font-bold text-slate-900 font-display">Manage Showroom Metadata</h3>
+                          <p className="text-slate-400 text-[11px] mt-0.5">Customize corporate phone numbers, prefixes, and default print guidelines.</p>
+                        </div>
 
                       <form onSubmit={handleSaveSettings} className="space-y-4 text-xs">
                         {/* Row 1: Company Name & Slogan */}
@@ -787,7 +816,39 @@ export default function App() {
                         </div>
                       </form>
                     </div>
-                  )}
+
+                    {/* DATABASE RESET / DATA CLEAR CARD */}
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-6 mt-6 space-y-4">
+                      <div className="flex items-center gap-2 text-rose-700 font-bold">
+                        <Trash2 className="w-5 h-5" />
+                        <h3 className="text-base">Database & Sample Data Management</h3>
+                      </div>
+                      <p className="text-xs text-slate-500 font-medium">
+                        Wipe current sample items, customer lists, and documents to start fresh with clean data entry, or restore original demo data.
+                      </p>
+                      
+                      <div className="flex flex-wrap gap-3 pt-2">
+                        <button
+                          type="button"
+                          onClick={handleClearAllData}
+                          className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-2 cursor-pointer shadow-xs"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Clear All Data (Start Fresh)
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleRestoreSampleData}
+                          className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors flex items-center gap-2 cursor-pointer border border-slate-300"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                          Restore Demo Sample Data
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 </>
               )}
 
