@@ -442,7 +442,7 @@ export default function PublicCatalog({ products, onAdminClick }: PublicCatalogP
           </p>
           <div className="border-t border-blue-200 pt-4 flex justify-between items-center text-xs">
             <div>
-              <p className="font-bold text-slate-900">Md. Jubayer Ahmed</p>
+              <p className="font-bold text-slate-900">MD MAHI UDDIN</p>
               <p className="text-slate-500">Managing Director</p>
             </div>
             <span className="bg-blue-900 text-white font-bold text-[10px] px-2 py-1 rounded">EST. 2018</span>
@@ -656,7 +656,7 @@ export default function PublicCatalog({ products, onAdminClick }: PublicCatalogP
                       <Check className="w-8 h-8 text-emerald-500 mx-auto" />
                       <h5 className="font-bold text-slate-900">Quotation Requested</h5>
                       <p className="text-[11px] text-slate-500 leading-normal">
-                        Your request for <b>{selectedProduct.name}</b> was logged. Md. Jubayer Ahmed's sales desk will contact you with a printed PDF quotation.
+                        Your request for <b>{selectedProduct.name}</b> was logged. MD MAHI UDDIN's sales desk will contact you with a printed PDF quotation.
                       </p>
                     </div>
                   ) : (
