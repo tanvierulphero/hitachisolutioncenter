@@ -1,0 +1,616 @@
+import { useState } from 'react';
+import { Document, BusinessSettings } from '../types';
+import { Mail, Phone, Globe, MapPin, Printer, Download, ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
+// @ts-ignore
+import html2pdf from 'html2pdf.js';
+
+interface PrintDocumentProps {
+  document: Document;
+  settings: BusinessSettings;
+  onBack?: () => void;
+}
+
+// Convert numbers to Bangladeshi/Indian format words (Taka Only)
+function numberToWords(num: number): string {
+  const integerPart = Math.floor(num);
+  if (integerPart === 0) return 'Zero Taka Only';
+
+  const a = [
+    '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+    'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'
+  ];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+  const grp = (n: number): string => {
+    let s = '';
+    const h = Math.floor(n / 100);
+    const t = n % 100;
+    if (h) {
+      s += a[h] + ' Hundred ';
+    }
+    if (t) {
+      if (s !== '') s += 'and ';
+      if (t < 20) {
+        s += a[t];
+      } else {
+        s += b[Math.floor(t / 10)] + (t % 10 ? '-' + a[t % 10] : '');
+      }
+    }
+    return s.trim();
+  };
+
+  let rem = integerPart;
+  let words = '';
+
+  const crore = Math.floor(rem / 10000000);
+  rem %= 10000000;
+
+  const lakh = Math.floor(rem / 100000);
+  rem %= 100000;
+
+  const thousand = Math.floor(rem / 1000);
+  rem %= 1000;
+
+  const hundred = Math.floor(rem / 100);
+  rem %= 100;
+
+  if (crore) {
+    words += grp(crore) + ' Crore ';
+  }
+  if (lakh) {
+    words += grp(lakh) + ' Lakh ';
+  }
+  if (thousand) {
+    words += grp(thousand) + ' Thousand ';
+  }
+  if (hundred) {
+    words += grp(hundred) + ' Hundred ';
+  }
+  if (rem) {
+    if (words !== '') words += 'and ';
+    if (rem < 20) {
+      words += a[rem] + ' ';
+    } else {
+      words += b[Math.floor(rem / 10)] + (rem % 10 ? '-' + a[rem % 10] : '') + ' ';
+    }
+  }
+
+  return words.trim() + ' Taka Only';
+}
+
+export default function PrintDocument({ document, settings, onBack }: PrintDocumentProps) {
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [pdfSuccessNotice, setPdfSuccessNotice] = useState(false);
+
+  const isOffer = document.type === 'OFFER_LETTER';
+  const isQuotation = document.type === 'QUOTATION';
+  const isInvoice = document.type === 'INVOICE';
+  const isBill = document.type === 'BILL';
+
+  // Format document titles for presentation
+  const getDocTitle = () => {
+    switch (document.type) {
+      case 'OFFER_LETTER': return 'OFFER LETTER';
+      case 'QUOTATION': return 'QUOTATION';
+      case 'BILL': return 'BILL';
+      case 'INVOICE': return 'INVOICE';
+      default: return 'DOCUMENT';
+    }
+  };
+
+  // Direct Browser Print Dialog Trigger with Isolated Frame Fallback
+  const handlePrint = () => {
+    const element = window.document.getElementById('printable-area');
+    if (!element) {
+      window.print();
+      return;
+    }
+
+    try {
+      // Remove any leftover print iframe if present
+      const existingIframe = window.document.getElementById('temp-print-frame');
+      if (existingIframe) {
+        existingIframe.remove();
+      }
+
+      // Create isolated invisible iframe for printing to avoid iframe sandbox/parent layout issues
+      const iframe = window.document.createElement('iframe');
+      iframe.id = 'temp-print-frame';
+      iframe.name = 'temp-print-frame';
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0px';
+      iframe.style.height = '0px';
+      iframe.style.border = '0px';
+      window.document.body.appendChild(iframe);
+
+      const frameWindow = iframe.contentWindow;
+      const frameDoc = frameWindow?.document;
+      if (!frameDoc || !frameWindow) {
+        window.print();
+        return;
+      }
+
+      // Collect all current stylesheets and font links
+      let stylesHtml = '';
+      const styleNodes = Array.from(window.document.querySelectorAll('style, link[rel="stylesheet"]'));
+      styleNodes.forEach(node => {
+        stylesHtml += node.outerHTML;
+      });
+
+      frameDoc.open();
+      frameDoc.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>${getDocTitle()} - ${document.docNumber}</title>
+            ${stylesHtml}
+            <style>
+              @page {
+                size: A4 portrait;
+                margin: 10mm;
+              }
+              body {
+                margin: 0 !important;
+                padding: 20px !important;
+                background: #ffffff !important;
+                color: #0f172a !important;
+                font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              #printable-area {
+                width: 100% !important;
+                max-width: 100% !important;
+                box-shadow: none !important;
+                border: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                min-height: auto !important;
+              }
+              .no-print {
+                display: none !important;
+              }
+            </style>
+          </head>
+          <body>
+            ${element.outerHTML}
+          </body>
+        </html>
+      `);
+      frameDoc.close();
+
+      // Give images and styles 300ms to settle in the frame before triggering print
+      setTimeout(() => {
+        try {
+          frameWindow.focus();
+          frameWindow.print();
+        } catch (err) {
+          console.warn('Iframe print failed, calling window.print()', err);
+          window.print();
+        } finally {
+          setTimeout(() => {
+            if (window.document.body.contains(iframe)) {
+              window.document.body.removeChild(iframe);
+            }
+          }, 3000);
+        }
+      }, 300);
+    } catch (e) {
+      console.warn('Isolated iframe creation failed, using window.print() fallback', e);
+      window.print();
+    }
+  };
+
+  // Download PDF file directly using html2pdf.js
+  const handleSavePdf = async () => {
+    setIsGeneratingPdf(true);
+    setPdfSuccessNotice(false);
+
+    const element = window.document.getElementById('printable-area');
+    if (!element) {
+      setIsGeneratingPdf(false);
+      window.print();
+      return;
+    }
+
+    const cleanCustomerName = document.customerName ? document.customerName.replace(/[^a-zA-Z0-9]/g, '_') : 'Customer';
+    const filename = `${document.docNumber}_${cleanCustomerName}.pdf`;
+
+    const opt = {
+      margin: [8, 8, 8, 8], // mm
+      filename: filename,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { 
+        scale: 2, 
+        useCORS: true, 
+        logging: false,
+        onclone: (clonedDoc: Document) => {
+          // 1. Sanitize all <style> tags to replace oklch/oklab syntax with standard RGB/Hex
+          const styleTags = clonedDoc.querySelectorAll('style');
+          styleTags.forEach((styleTag) => {
+            if (styleTag.textContent && (styleTag.textContent.includes('oklch') || styleTag.textContent.includes('oklab'))) {
+              styleTag.textContent = styleTag.textContent
+                .replace(/oklch\([^)]+\)/gi, '#1e3a8a')
+                .replace(/oklab\([^)]+\)/gi, '#1e3a8a');
+            }
+          });
+
+          // 2. Inject standard RGB/Hex overrides for all root CSS variables to prevent oklch parsing in html2canvas
+          const overrideStyle = clonedDoc.createElement('style');
+          overrideStyle.textContent = `
+            :root, * {
+              --color-blue-50: #eff6ff !important;
+              --color-blue-100: #dbeafe !important;
+              --color-blue-600: #2563eb !important;
+              --color-blue-700: #1d4ed8 !important;
+              --color-blue-800: #1e40af !important;
+              --color-blue-900: #1e3a8a !important;
+              --color-slate-50: #f8fafc !important;
+              --color-slate-100: #f1f5f9 !important;
+              --color-slate-200: #e2e8f0 !important;
+              --color-slate-300: #cbd5e1 !important;
+              --color-slate-400: #94a3b8 !important;
+              --color-slate-500: #64748b !important;
+              --color-slate-600: #475569 !important;
+              --color-slate-700: #334155 !important;
+              --color-slate-800: #1e293b !important;
+              --color-slate-900: #0f172a !important;
+            }
+          `;
+          clonedDoc.head.appendChild(overrideStyle);
+
+          // 3. Clean inline style attributes on all cloned elements
+          const printEl = clonedDoc.getElementById('printable-area');
+          if (printEl) {
+            const allNodes = printEl.querySelectorAll('*');
+            allNodes.forEach((node) => {
+              const el = node as HTMLElement;
+              if (el.style) {
+                const styleAttr = el.getAttribute('style') || '';
+                if (styleAttr.includes('oklch') || styleAttr.includes('oklab')) {
+                  el.setAttribute(
+                    'style',
+                    styleAttr
+                      .replace(/oklch\([^)]+\)/gi, '#1e3a8a')
+                      .replace(/oklab\([^)]+\)/gi, '#1e3a8a')
+                  );
+                }
+              }
+            });
+          }
+        }
+      },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    try {
+      if (typeof html2pdf === 'function') {
+        await html2pdf().set(opt).from(element).save();
+      } else {
+        // Fallback to window.print
+        window.print();
+      }
+      setPdfSuccessNotice(true);
+      setTimeout(() => setPdfSuccessNotice(false), 4000);
+    } catch (err) {
+      console.error('PDF export error:', err);
+      window.print();
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  return (
+    <div className="bg-slate-100 min-h-screen py-8 px-4 no-print flex flex-col items-center">
+      {/* Top action bar, hidden in print mode */}
+      <div className="w-full max-w-4xl bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6 flex flex-wrap gap-3 items-center justify-between no-print">
+        <div className="flex items-center gap-2">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to List
+            </button>
+          )}
+          <span className="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
+            {getDocTitle()} : <span className="font-mono text-blue-900 font-extrabold">{document.docNumber}</span>
+          </span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {/* Print Button */}
+          <button
+            onClick={handlePrint}
+            className="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl shadow-xs transition-all hover:scale-[1.02] flex items-center gap-2 cursor-pointer"
+            title="Open browser print preview dialog"
+          >
+            <Printer className="w-4 h-4 text-blue-300" />
+            Print Document
+          </button>
+
+          {/* Save as PDF Button */}
+          <button
+            onClick={handleSavePdf}
+            disabled={isGeneratingPdf}
+            className="px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-xl shadow-xs transition-all hover:scale-[1.02] flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            title="Download PDF file directly to your device"
+          >
+            {isGeneratingPdf ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-blue-300" />
+                Generating PDF...
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4 text-blue-300" />
+                Save as PDF
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Success Notification Toast */}
+      {pdfSuccessNotice && (
+        <div className="w-full max-w-4xl bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-2.5 rounded-xl mb-4 flex items-center justify-between text-xs font-bold shadow-xs animate-fade-in no-print">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <span>PDF Document successfully generated and saved to downloads!</span>
+          </div>
+          <button onClick={() => setPdfSuccessNotice(false)} className="text-emerald-600 hover:text-emerald-900 font-bold">&times;</button>
+        </div>
+      )}
+
+      {/* RENDER STYLED LETTERHEAD SHEETS FOR PRINT AND DISPLAY */}
+      <div 
+        id="printable-area" 
+        className="w-full max-w-4xl bg-white shadow-xl rounded-lg p-10 md:p-14 text-slate-800 watermark-container watermark-bg min-h-[1130px] flex flex-col justify-between border border-slate-100 relative print-container"
+      >
+        <div>
+          {/* Header Block matching uploaded image */}
+          <div className="flex flex-col md:flex-row items-center justify-between border-b-2 border-blue-900 pb-5 mb-8">
+            {/* Left Brand Identity */}
+            <div className="flex items-center gap-4 mb-4 md:mb-0">
+              {/* Custom SVG logo mimicking hitachisolutioncenter gear design */}
+              <div className="relative w-16 h-16 flex-shrink-0 text-blue-900 flex items-center justify-center">
+                <svg className="w-full h-full animate-spin-slow text-blue-900" viewBox="0 0 100 100" fill="currentColor">
+                  <path d="M50,12 A38,38 0 1,0 88,50 A38,38 0 0,0 50,12 M50,28 A22,22 0 1,1 28,50 A22,22 0 0,1 50,28" />
+                  <path d="M50,2 L44,14 L56,14 Z" />
+                  <path d="M50,98 L44,86 L56,86 Z" />
+                  <path d="M2,50 L14,44 L14,56 Z" />
+                  <path d="M98,50 L86,44 L86,56 Z" />
+                  <path d="M16,16 L26,26 L22,30 Z" />
+                  <path d="M84,84 L74,74 L78,70 Z" />
+                  <path d="M16,84 L26,74 L22,70 Z" />
+                  <path d="M84,16 L74,26 L78,30 Z" />
+                </svg>
+                {/* Wrench / Inner Details */}
+                <div className="absolute inset-0 flex items-center justify-center font-bold text-lg font-display tracking-tighter">
+                  JM
+                </div>
+              </div>
+              
+              <div>
+                <h1 className="text-3xl md:text-4xl font-extrabold font-display text-blue-900 tracking-tight leading-none">
+                  {settings.name}
+                </h1>
+                <p className="text-[10px] md:text-xs font-semibold text-rose-600 mt-1 uppercase tracking-wider font-sans italic">
+                  {settings.slogan}
+                </p>
+              </div>
+            </div>
+
+            {/* Middle decorative bar (visible in md screens) */}
+            <div className="hidden md:block h-14 w-[1px] bg-blue-300 mx-4"></div>
+
+            {/* Right Contact Details */}
+            <div className="text-right text-xs text-slate-600 space-y-1 font-sans">
+              <div className="flex items-center justify-end gap-1.5 font-semibold text-slate-800">
+                <MapPin className="w-3.5 h-3.5 text-blue-800" />
+                <span>Corporate Office: {settings.address}</span>
+              </div>
+              <div className="flex items-center justify-end gap-1.5">
+                <Phone className="w-3.5 h-3.5 text-blue-800" />
+                <span>{settings.phone1}, {settings.phone2}</span>
+              </div>
+              <div className="flex items-center justify-end gap-1.5">
+                <Mail className="w-3.5 h-3.5 text-blue-800" />
+                <span>{settings.email}</span>
+              </div>
+              <div className="flex items-center justify-end gap-1.5 text-blue-800 font-medium">
+                <Globe className="w-3.5 h-3.5" />
+                <a href={`https://${settings.website}`} target="_blank" rel="noopener noreferrer">{settings.website}</a>
+              </div>
+            </div>
+          </div>
+
+          {/* Document Title Bar */}
+          <div className="flex justify-between items-center bg-slate-100 px-4 py-2.5 rounded mb-6 border-l-4 border-blue-800">
+            <span className="text-sm font-bold text-blue-900 font-display uppercase tracking-wider">
+              {getDocTitle()}
+            </span>
+            <div className="text-right text-xs space-y-0.5">
+              <div><span className="font-semibold text-slate-500">No:</span> <span className="font-bold text-slate-800">{document.docNumber}</span></div>
+              <div><span className="font-semibold text-slate-500">Date:</span> <span className="font-semibold text-slate-800">{document.date}</span></div>
+              {document.dueDate && (
+                <div><span className="font-semibold text-rose-500">Due Date:</span> <span className="font-bold text-slate-800">{document.dueDate}</span></div>
+              )}
+            </div>
+          </div>
+
+          {/* Customer Metadata Block */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 text-xs leading-relaxed border-b border-slate-100 pb-6">
+            <div>
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Recipient / Client:</h3>
+              <p className="text-sm font-bold text-slate-900 font-display">{document.customerName}</p>
+              {document.customerCompany && (
+                <p className="font-semibold text-slate-700">{document.customerCompany}</p>
+              )}
+              <p className="text-slate-600 mt-1 flex items-center gap-1">
+                <Phone className="w-3 h-3 text-slate-400 inline" /> {document.customerPhone}
+              </p>
+              {document.customerEmail && (
+                <p className="text-slate-600 flex items-center gap-1">
+                  <Mail className="w-3 h-3 text-slate-400 inline" /> {document.customerEmail}
+                </p>
+              )}
+            </div>
+            
+            <div className="md:text-right">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 md:justify-end">Address:</h3>
+              <p className="text-slate-700 whitespace-pre-line">{document.customerAddress}</p>
+            </div>
+          </div>
+
+          {/* Offer Letter / Quotation Paragraphs */}
+          {(isOffer || isQuotation) && (
+            <div className="mb-6 space-y-4 text-xs leading-relaxed text-slate-700">
+              {document.subject && (
+                <p className="font-bold text-slate-900 border-b border-slate-200 pb-2">
+                  <span className="text-blue-900">Subject:</span> {document.subject}
+                </p>
+              )}
+              {document.salutation && (
+                <p className="font-semibold text-slate-800">{document.salutation}</p>
+              )}
+              {document.openingParagraph && (
+                <p className="whitespace-pre-line">{document.openingParagraph}</p>
+              )}
+            </div>
+          )}
+
+          {/* DOCUMENT ITEMS TABLE */}
+          {document.items && document.items.length > 0 ? (
+            <div className="overflow-x-auto mb-8 relative z-10">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-blue-900 text-white uppercase text-[10px] tracking-wider font-semibold">
+                    <th className="py-2.5 px-3 text-center rounded-l w-12">SL</th>
+                    <th className="py-2.5 px-3">Description of Goods / Spare Parts</th>
+                    <th className="py-2.5 px-3 text-center">Brand</th>
+                    <th className="py-2.5 px-3 text-right w-16">Qty</th>
+                    <th className="py-2.5 px-3 text-center w-14">Unit</th>
+                    <th className="py-2.5 px-3 text-right w-24">Unit Price (BDT)</th>
+                    <th className="py-2.5 px-3 text-right rounded-r w-28">Total Amount (BDT)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {document.items.map((item, index) => (
+                    <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-3 px-3 text-center font-medium text-slate-500">{index + 1}</td>
+                      <td className="py-3 px-3 font-semibold text-slate-900 whitespace-normal">
+                        {item.name}
+                      </td>
+                      <td className="py-3 px-3 text-center">
+                        <span className="inline-block bg-slate-100 text-slate-700 font-medium px-2 py-0.5 rounded text-[10px]">
+                          {item.brand}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-right font-medium">{item.quantity}</td>
+                      <td className="py-3 px-3 text-center font-medium text-slate-500">{item.unit || 'Pcs'}</td>
+                      <td className="py-3 px-3 text-right font-medium">৳{item.price.toLocaleString()}</td>
+                      <td className="py-3 px-3 text-right font-bold text-slate-900">৳{item.total.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-slate-400 text-xs italic bg-slate-50 rounded border border-dashed border-slate-200 mb-8">
+              No items listed in this document.
+            </div>
+          )}
+
+          {/* Pricing Totals & Word Conversion */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start mb-8 relative z-10">
+            {/* Word Conversion (Left column) */}
+            <div className="md:col-span-7 bg-blue-50/50 p-4 rounded-lg border border-blue-100/50">
+              <span className="text-[10px] font-bold text-blue-900/60 uppercase tracking-widest block mb-1">
+                Amount in Words
+              </span>
+              <p className="text-xs font-bold text-blue-950 font-display italic">
+                {numberToWords(document.total)}
+              </p>
+            </div>
+
+            {/* Calculations Breakdown (Right column) */}
+            <div className="md:col-span-5 text-xs space-y-2 font-medium">
+              <div className="flex justify-between text-slate-500">
+                <span>Sub-Total:</span>
+                <span className="text-slate-800">৳{document.subtotal.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-slate-500">
+                <span>VAT / Tax ({document.taxRate}%):</span>
+                <span className="text-slate-800">৳{document.taxAmount.toLocaleString()}</span>
+              </div>
+              {document.discount > 0 && (
+                <div className="flex justify-between text-rose-600 font-semibold">
+                  <span>Special Discount:</span>
+                  <span>- ৳{document.discount.toLocaleString()}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm font-bold border-t border-slate-200 pt-2.5 text-blue-900">
+                <span>Total Payable:</span>
+                <span className="text-lg font-extrabold text-blue-950">৳{document.total.toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Terms, Conditions & Closing */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-10 border-t border-slate-100 pt-8 text-xs relative z-10">
+            {/* Left side: Terms of Offer */}
+            {document.terms && (
+              <div className="bg-slate-50 p-4 rounded border border-slate-100">
+                <h4 className="font-bold text-slate-800 uppercase tracking-wider mb-2 border-b border-slate-200 pb-1 text-[10px]">
+                  Terms & Conditions:
+                </h4>
+                <p className="whitespace-pre-line text-[11px] text-slate-600 leading-relaxed font-sans">
+                  {document.terms}
+                </p>
+              </div>
+            )}
+
+            {/* Right side: Closing letter text & Signatures */}
+            <div className="flex flex-col justify-between items-end md:text-right h-full min-h-[140px]">
+              {(isOffer || isQuotation) && document.closingParagraph && (
+                <p className="text-slate-600 italic text-[11px] mb-6 leading-normal md:max-w-xs">
+                  {document.closingParagraph}
+                </p>
+              )}
+              
+              <div className="mt-auto pt-6 text-center md:text-right w-48">
+                <div className="h-10 border-b border-slate-300 w-full mb-2"></div>
+                <p className="font-bold text-slate-900 font-display leading-none">{document.signatureName}</p>
+                <p className="text-[10px] text-slate-500 mt-1 uppercase font-semibold">{document.signatureLabel}</p>
+                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">{settings.name}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* High-Fidelity Print Slogan and Brands Footer matching the image */}
+        <div className="border-t-2 border-blue-900 pt-4 mt-12 text-center relative z-10">
+          {/* Logo labels as styled text representing standard machinery footer brands */}
+          <div className="flex flex-wrap items-center justify-center gap-y-2 gap-x-4 mb-3 text-[10px] font-extrabold text-slate-400 tracking-wider font-sans uppercase">
+            <span className="text-slate-700 font-display font-black text-xs border-r border-slate-200 pr-3">HITACHI</span>
+            <span className="text-blue-800 font-black">Atlas Copco</span>
+            <span className="text-cyan-800 font-black">Linghein</span>
+            <span className="text-amber-800 font-black">KAESER</span>
+            <span className="text-teal-800 font-black">BOGE</span>
+            <span className="text-rose-800 font-black">ELGi</span>
+            <span className="text-indigo-800 font-black">JAGUAR</span>
+            <span className="text-violet-800 font-black">IR Ingersoll Rand</span>
+            <span className="text-emerald-800 font-black">Gardner Denver</span>
+          </div>
+          <p className="text-[11px] md:text-xs text-blue-900 font-bold italic font-sans">
+            "We supply all brand screw air compressor genuine spare parts"
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}

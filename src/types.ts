@@ -1,0 +1,133 @@
+export interface ProductSpec {
+  label: string;
+  value: string;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  sku: string;
+  category: string;
+  brand: string;
+  price: number;
+  stock: number;
+  unit: string;
+  description: string;
+  specs: ProductSpec[];
+  imageUrl: string;
+}
+
+export interface Customer {
+  id: string;
+  name: string;
+  company: string;
+  phone: string;
+  email: string;
+  address: string;
+}
+
+export type DocumentType = 'OFFER_LETTER' | 'QUOTATION' | 'BILL' | 'INVOICE';
+
+export type DocumentStatus = 
+  | 'Draft' 
+  | 'Sent' 
+  | 'Paid' 
+  | 'Partially Paid'
+  | 'Unpaid' 
+  | 'Overdue' 
+  | 'Accepted' 
+  | 'Declined'
+  | 'Active';
+
+export type UserRole = 'ADMIN' | 'MANAGER' | 'SALESMAN' | 'STAFF' | 'CUSTOM';
+
+export type PermissionKey =
+  | 'view_overview'
+  | 'view_inventory'
+  | 'manage_inventory'
+  | 'view_documents'
+  | 'create_documents'
+  | 'edit_documents'
+  | 'delete_documents'
+  | 'view_reports'
+  | 'view_due_ledger'
+  | 'manage_due_ledger'
+  | 'view_staff_management'
+  | 'manage_settings';
+
+export interface StaffUser {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  passcode: string;
+  role: UserRole;
+  designation: string;
+  status: 'Active' | 'Inactive';
+  permissions: PermissionKey[];
+  createdAt: string;
+}
+
+export interface DocumentItem {
+  id: string;
+  productId?: string;
+  name: string;
+  brand: string;
+  quantity: number;
+  price: number;
+  total: number;
+  unit: string;
+}
+
+export interface Document {
+  id: string;
+  type: DocumentType;
+  docNumber: string; // e.g. JM-2026-0001
+  date: string;
+  dueDate?: string; // invoice/bill
+  customerId: string;
+  customerName: string;
+  customerCompany: string;
+  customerPhone: string;
+  customerEmail: string;
+  customerAddress: string;
+  
+  // Specific to Offer Letter / Quotation
+  subject?: string;
+  salutation?: string;
+  openingParagraph?: string;
+  closingParagraph?: string;
+  
+  // General Document Fields
+  items: DocumentItem[];
+  subtotal: number;
+  taxRate: number; // percentage
+  taxAmount: number;
+  discount: number; // flat amount
+  total: number;
+  paidAmount?: number; // Outstanding/Due Ledger tracking
+  dueAmount?: number;  // Outstanding/Due Ledger tracking
+  status: DocumentStatus;
+  terms: string;
+  notes?: string;
+  signatureLabel: string;
+  signatureName: string;
+}
+
+export interface BusinessSettings {
+  name: string;
+  slogan: string;
+  address: string;
+  phone1: string;
+  phone2: string;
+  email: string;
+  website: string;
+  invoicePrefix: string;
+  quotePrefix: string;
+  offerPrefix: string;
+  billPrefix: string;
+  taxRate: number;
+  terms: string;
+  signatureName: string;
+  signatureLabel: string;
+}
