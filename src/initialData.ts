@@ -18,8 +18,8 @@ export const ALL_PERMISSIONS: { key: PermissionKey; label: string; description: 
 export const INITIAL_STAFF_USERS: StaffUser[] = [
   {
     id: 'staff-admin-1',
-    name: 'Md. Jubayer Ahmed',
-    email: 'jubayer@hitachisolutioncenter.com',
+    name: 'MD MAHI UDDIN',
+    email: 'mahi@hitachisolutioncenter.com',
     phone: '01715-994956',
     passcode: 'admin123',
     role: 'ADMIN',
@@ -100,7 +100,7 @@ export const DEFAULT_SETTINGS: BusinessSettings = {
   billPrefix: "HSC/BILL/2026/",
   taxRate: 5, // 5% VAT
   terms: "1. Delivery: Within 7 working days upon receipt of work order.\n2. Payment: 50% advance with work order & 50% upon delivery.\n3. Warranty: 1 Year comprehensive brand warranty.\n4. Validity of this offer is 30 days.",
-  signatureName: "Md. Jubayer Ahmed",
+  signatureName: "MD MAHI UDDIN",
   signatureLabel: "Managing Director"
 };
 
@@ -312,7 +312,7 @@ export const INITIAL_DOCUMENTS: Document[] = [
     total: 68500,
     status: "Active",
     terms: "1. Delivery: Within 2-3 working days.\n2. Payment: Cash or Cheque in favor of hitachisolutioncenter upon delivery.\n3. Product: 100% Genuine brand quality parts.",
-    signatureName: "Md. Jubayer Ahmed",
+    signatureName: "MD MAHI UDDIN",
     signatureLabel: "Managing Director"
   },
   {
@@ -359,7 +359,7 @@ export const INITIAL_DOCUMENTS: Document[] = [
     total: 987700,
     status: "Sent",
     terms: "1. Delivery: Ex-stock Gazipur showroom.\n2. Price: Includes delivery and installation support within Gazipur district.\n3. Warranty: 18 Months mechanical warranty from commission.\n4. Subject to standard business clauses.",
-    signatureName: "Md. Jubayer Ahmed",
+    signatureName: "MD MAHI UDDIN",
     signatureLabel: "Managing Director"
   },
   {
@@ -403,7 +403,7 @@ export const INITIAL_DOCUMENTS: Document[] = [
     total: 851750,
     status: "Paid",
     terms: "This invoice is fully paid. Thank you for choosing hitachisolutioncenter as your sustainable partner.",
-    signatureName: "Md. Jubayer Ahmed",
+    signatureName: "MD MAHI UDDIN",
     signatureLabel: "Managing Director"
   },
   {
@@ -437,7 +437,7 @@ export const INITIAL_DOCUMENTS: Document[] = [
     total: 75600,
     status: "Unpaid",
     terms: "Payment should be cleared within 14 days of bill submission.",
-    signatureName: "Md. Jubayer Ahmed",
+    signatureName: "MD MAHI UDDIN",
     signatureLabel: "Managing Director"
   }
 ];

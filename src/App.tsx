@@ -128,23 +128,19 @@ export default function App() {
 
       if (savedSettings) {
         const parsed = JSON.parse(savedSettings);
-        if (parsed.name === "Jubayer Machineries") {
-          const migrated = {
-            ...parsed,
-            name: "hitachisolutioncenter",
-            email: parsed.email === "jubayermachineries@gmail.com" ? "info@hitachisolutioncenter.com" : parsed.email,
-            invoicePrefix: parsed.invoicePrefix === "JM/INV/2026/" ? "HSC/INV/2026/" : parsed.invoicePrefix,
-            quotePrefix: parsed.quotePrefix === "JM/QT/2026/" ? "HSC/QT/2026/" : parsed.quotePrefix,
-            offerPrefix: parsed.offerPrefix === "JM/OF/2026/" ? "HSC/OF/2026/" : parsed.offerPrefix,
-            billPrefix: parsed.billPrefix === "JM/BILL/2026/" ? "HSC/BILL/2026/" : parsed.billPrefix,
-          };
-          setSettings(migrated);
-          setSettingsForm(migrated);
-          localStorage.setItem('jm_settings', JSON.stringify(migrated));
-        } else {
-          setSettings(parsed);
-          setSettingsForm(parsed);
-        }
+        const updated = {
+          ...parsed,
+          signatureName: (!parsed.signatureName || parsed.signatureName === "Md. Jubayer Ahmed") ? "MD MAHI UDDIN" : parsed.signatureName,
+          name: parsed.name === "Jubayer Machineries" ? "hitachisolutioncenter" : parsed.name,
+          email: parsed.email === "jubayermachineries@gmail.com" ? "info@hitachisolutioncenter.com" : parsed.email,
+          invoicePrefix: parsed.invoicePrefix === "JM/INV/2026/" ? "HSC/INV/2026/" : parsed.invoicePrefix,
+          quotePrefix: parsed.quotePrefix === "JM/QT/2026/" ? "HSC/QT/2026/" : parsed.quotePrefix,
+          offerPrefix: parsed.offerPrefix === "JM/OF/2026/" ? "HSC/OF/2026/" : parsed.offerPrefix,
+          billPrefix: parsed.billPrefix === "JM/BILL/2026/" ? "HSC/BILL/2026/" : parsed.billPrefix,
+        };
+        setSettings(updated);
+        setSettingsForm(updated);
+        localStorage.setItem('jm_settings', JSON.stringify(updated));
       } else {
         setSettings(DEFAULT_SETTINGS);
         setSettingsForm(DEFAULT_SETTINGS);

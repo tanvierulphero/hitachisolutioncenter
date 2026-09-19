@@ -50,8 +50,8 @@ export default function AdminLogin({ staffUsers, onLoginSuccess, onBackToCatalog
     if (inputPass === 'admin123' || inputPass.toLowerCase() === 'admin') {
       const superAdmin = staffUsers.find(s => s.role === 'ADMIN') || {
         id: 'staff-admin-master',
-        name: 'Md. Jubayer Ahmed',
-        email: 'jubayer@hitachisolutioncenter.com',
+        name: 'MD MAHI UDDIN',
+        email: 'mahi@hitachisolutioncenter.com',
         phone: '01715-994956',
         passcode: 'admin123',
         role: 'ADMIN',
