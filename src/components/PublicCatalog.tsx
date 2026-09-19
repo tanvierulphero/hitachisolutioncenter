@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Product } from '../types';
 import { Search, SlidersHorizontal, Check, ArrowRight, Phone, Mail, MapPin, Award, ShieldCheck, Settings2, Sparkles } from 'lucide-react';
+import Logo from './Logo';
 
 interface PublicCatalogProps {
   products: Product[];
@@ -112,20 +113,8 @@ export default function PublicCatalog({ products, onAdminClick }: PublicCatalogP
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {/* Logo */}
-            <div className="w-10 h-10 text-blue-900 flex-shrink-0">
-              <svg className="w-full h-full text-blue-900" viewBox="0 0 100 100" fill="currentColor">
-                <path d="M50,12 A38,38 0 1,0 88,50 A38,38 0 0,0 50,12 M50,28 A22,22 0 1,1 28,50 A22,22 0 0,1 50,28" />
-                <path d="M50,2 L44,14 L56,14 Z" />
-                <path d="M50,98 L44,86 L56,86 Z" />
-              </svg>
-            </div>
-            <div>
-              <span className="text-xl md:text-2xl font-black font-display text-blue-900 tracking-tight leading-none block">
-                hitachisolutioncenter
-              </span>
-              <span className="text-[9px] uppercase tracking-wider font-bold text-rose-600 block italic leading-none mt-1">
-                Your Sustainable Partner
-              </span>
+            <div className="h-11 w-auto flex-shrink-0">
+              <Logo className="h-full w-auto text-blue-900" />
             </div>
           </div>
 

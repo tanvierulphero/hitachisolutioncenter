@@ -45,6 +45,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { getSupabaseConfig, saveSupabaseConfig, getSupabaseClient } from './lib/supabase';
+import Logo from './components/Logo';
 
 export default function App() {
   // Authentication & Layout Views
@@ -376,18 +377,8 @@ export default function App() {
           <aside className="w-full md:w-64 bg-slate-900 text-slate-300 flex flex-col justify-between border-r border-slate-950 flex-shrink-0 z-30">
             <div>
               {/* Brand Header */}
-              <div className="p-5 border-b border-slate-950 flex items-center gap-3">
-                <div className="w-9 h-9 bg-blue-600 text-white rounded-lg flex items-center justify-center font-bold font-display text-base">
-                  HSC
-                </div>
-                <div>
-                  <h2 className="font-extrabold text-sm tracking-tight text-white leading-none block">
-                    hitachisolutioncenter
-                  </h2>
-                  <span className="text-[9px] uppercase tracking-wider font-bold text-rose-500 block italic mt-1 leading-none">
-                    Sustainable Partner
-                  </span>
-                </div>
+              <div className="p-5 border-b border-slate-950 flex items-center justify-center h-16">
+                <Logo className="h-full w-auto text-white" light={true} />
               </div>
 
               {/* Sidebar Tabs Links */}

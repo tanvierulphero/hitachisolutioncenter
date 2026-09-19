@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { StaffUser } from '../types';
 import { Lock, ArrowLeft, Eye, EyeOff, ShieldAlert, UserCheck, ShieldCheck, Key } from 'lucide-react';
+import Logo from './Logo';
 
 interface AdminLoginProps {
   staffUsers: StaffUser[];
@@ -99,15 +100,12 @@ export default function AdminLogin({ staffUsers, onLoginSuccess, onBackToCatalog
 
         {/* Brand identity header */}
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 bg-blue-50 text-blue-900 rounded-full flex items-center justify-center mx-auto mb-3">
-            <Lock className="w-6 h-6" />
+          <div className="h-14 w-auto flex justify-center mb-4">
+            <Logo className="h-full w-auto text-blue-900" />
           </div>
-          <h2 className="text-2xl font-black font-display text-slate-900 leading-tight">
+          <h2 className="text-xl font-black font-display text-slate-900 leading-tight">
             Private Workspace Login
           </h2>
-          <p className="text-xs font-bold text-rose-600 uppercase tracking-wider italic">
-            hitachisolutioncenter Portal
-          </p>
           <p className="text-xs text-slate-500 max-w-xs mx-auto pt-1 leading-relaxed">
             Enter your assigned sub-account passcode to access the workspace according to your role permissions.
           </p>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Document, BusinessSettings } from '../types';
 import { Mail, Phone, Globe, MapPin, Printer, Download, ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
+import Logo from './Logo';
 // @ts-ignore
 import html2pdf from 'html2pdf.js';
 
@@ -374,34 +375,8 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
           {/* Header Block matching uploaded image */}
           <div className="flex flex-col md:flex-row items-center justify-between border-b-2 border-blue-900 pb-5 mb-8">
             {/* Left Brand Identity */}
-            <div className="flex items-center gap-4 mb-4 md:mb-0">
-              {/* Custom SVG logo mimicking hitachisolutioncenter gear design */}
-              <div className="relative w-16 h-16 flex-shrink-0 text-blue-900 flex items-center justify-center">
-                <svg className="w-full h-full animate-spin-slow text-blue-900" viewBox="0 0 100 100" fill="currentColor">
-                  <path d="M50,12 A38,38 0 1,0 88,50 A38,38 0 0,0 50,12 M50,28 A22,22 0 1,1 28,50 A22,22 0 0,1 50,28" />
-                  <path d="M50,2 L44,14 L56,14 Z" />
-                  <path d="M50,98 L44,86 L56,86 Z" />
-                  <path d="M2,50 L14,44 L14,56 Z" />
-                  <path d="M98,50 L86,44 L86,56 Z" />
-                  <path d="M16,16 L26,26 L22,30 Z" />
-                  <path d="M84,84 L74,74 L78,70 Z" />
-                  <path d="M16,84 L26,74 L22,70 Z" />
-                  <path d="M84,16 L74,26 L78,30 Z" />
-                </svg>
-                {/* Wrench / Inner Details */}
-                <div className="absolute inset-0 flex items-center justify-center font-bold text-lg font-display tracking-tighter">
-                  JM
-                </div>
-              </div>
-              
-              <div>
-                <h1 className="text-3xl md:text-4xl font-extrabold font-display text-blue-900 tracking-tight leading-none">
-                  {settings.name}
-                </h1>
-                <p className="text-[10px] md:text-xs font-semibold text-rose-600 mt-1 uppercase tracking-wider font-sans italic">
-                  {settings.slogan}
-                </p>
-              </div>
+            <div className="flex items-center gap-4 mb-4 md:mb-0 h-16 w-auto">
+              <Logo className="h-full w-auto text-blue-900" />
             </div>
 
             {/* Middle decorative bar (visible in md screens) */}
