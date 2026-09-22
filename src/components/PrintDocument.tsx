@@ -288,10 +288,13 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
     };
 
     try {
-      if (typeof html2pdf === 'function') {
-        await html2pdf().set(opt).from(element).save();
+      // Resolve html2pdf function robustly under both CommonJS/ESM bundling wrap
+      const html2pdfFunc = (html2pdf as any).default || html2pdf;
+
+      if (typeof html2pdfFunc === 'function') {
+        await html2pdfFunc().set(opt).from(element).save();
       } else {
-        // Fallback to window.print
+        console.warn('html2pdf was not found as a function, falling back to window.print');
         window.print();
       }
       setPdfSuccessNotice(true);
@@ -370,9 +373,16 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
       {/* RENDER STYLED LETTERHEAD SHEETS FOR PRINT AND DISPLAY */}
       <div 
         id="printable-area" 
-        className="w-full md:w-[210mm] md:min-h-[297mm] bg-white shadow-xl rounded-lg p-10 md:p-14 text-slate-800 watermark-container watermark-bg flex flex-col justify-between border border-slate-100 relative print-container mx-auto"
+        className="w-full md:w-[210mm] md:min-h-[297mm] bg-white shadow-xl rounded-lg p-10 md:p-14 text-slate-800 watermark-container flex flex-col justify-between border border-slate-100 relative print-container mx-auto overflow-hidden"
       >
-        <div>
+        {/* Inline DOM vector watermark for 100% PDF/Print Rendering support */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] h-[320px] pointer-events-none select-none z-0 opacity-[0.035]" style={{ color: '#1e3a8a', opacity: 0.035 }}>
+          <svg viewBox="0 0 100 100" fill="currentColor" className="w-full h-full">
+            <path d="M50,15A35,35 0 1,0 85,50A35,35 0 0,0 50,15 M50,30 A20,20 0 1,1 30,50 A20,20 0 0,1 50,30" />
+            <path d="M50,5 L46,15 L54,15 Z M50,95 L46,85 L54,85 Z M5,50 L15,46 L15,54 Z M95,50 L85,46 L85,54 Z M18,18 L25,25 L21,29 Z M82,82 L75,75 L79,71 Z M18,82 L25,75 L21,71 Z M82,18 L75,25 L79,29 Z" />
+          </svg>
+        </div>
+        <div className="relative z-10 flex flex-col justify-between h-full">
           {/* Header Block matching uploaded image */}
           <div className="flex flex-col md:flex-row items-center justify-between pb-5 mb-8" style={{ borderBottom: '2px solid #1e3a8a' }}>
             {/* Left Brand Identity */}
@@ -566,33 +576,33 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
               </div>
             </div>
           </div>
-        </div>
 
-        {/* High-Fidelity Print Slogan and Brands Footer matching the image */}
-        <div className="pt-4 mt-12 text-center relative z-10" style={{ borderTop: '2px solid #1e3a8a' }}>
-          {/* Logo labels representing standard machinery footer brands with exact colors and uppercase styling */}
-          <div className="flex flex-wrap items-center justify-center gap-y-2 gap-x-3 mb-2.5 text-[9px] md:text-[10px] font-extrabold tracking-wider font-sans uppercase">
-            <span className="text-[#0a192f] font-black">HITACHI</span>
-            <span className="text-slate-300">|</span>
-            <span className="text-[#0054a6] font-black">ATLAS COPCO</span>
-            <span className="text-slate-300">|</span>
-            <span className="text-[#007cc3] font-black">LINGHEIN</span>
-            <span className="text-slate-300">|</span>
-            <span className="text-[#f15a24] font-black">KAESER</span>
-            <span className="text-slate-300">|</span>
-            <span className="text-[#009639] font-black">BOGE</span>
-            <span className="text-slate-300">|</span>
-            <span className="text-[#ed1c24] font-black">ELGI</span>
-            <span className="text-slate-300">|</span>
-            <span className="text-[#003b46] font-black">JAGUAR</span>
-            <span className="text-slate-300">|</span>
-            <span className="text-[#e31b23] font-black">IR INGERSOLL RAND</span>
-            <span className="text-slate-300">|</span>
-            <span className="text-[#00529b] font-black">GARDNER DENVER</span>
+          {/* High-Fidelity Print Slogan and Brands Footer matching the image */}
+          <div className="pt-4 mt-auto text-center relative z-10" style={{ borderTop: '2px solid #1e3a8a' }}>
+            {/* Logo labels representing standard machinery footer brands with exact colors and uppercase styling */}
+            <div className="flex flex-wrap items-center justify-center gap-y-2 gap-x-3 mb-2.5 text-[9px] md:text-[10px] font-extrabold tracking-wider font-sans uppercase">
+              <span className="text-[#0a192f] font-black">HITACHI</span>
+              <span className="text-slate-300">|</span>
+              <span className="text-[#0054a6] font-black">ATLAS COPCO</span>
+              <span className="text-slate-300">|</span>
+              <span className="text-[#007cc3] font-black">LINGHEIN</span>
+              <span className="text-slate-300">|</span>
+              <span className="text-[#f15a24] font-black">KAESER</span>
+              <span className="text-slate-300">|</span>
+              <span className="text-[#009639] font-black">BOGE</span>
+              <span className="text-slate-300">|</span>
+              <span className="text-[#ed1c24] font-black">ELGI</span>
+              <span className="text-slate-300">|</span>
+              <span className="text-[#003b46] font-black">JAGUAR</span>
+              <span className="text-slate-300">|</span>
+              <span className="text-[#e31b23] font-black">IR INGERSOLL RAND</span>
+              <span className="text-slate-300">|</span>
+              <span className="text-[#00529b] font-black">GARDNER DENVER</span>
+            </div>
+            <p className="text-[11px] md:text-xs font-bold italic font-sans" style={{ color: '#1e3a8a' }}>
+              "We supply all brand screw air compressor genuine spare parts"
+            </p>
           </div>
-          <p className="text-[11px] md:text-xs font-bold italic font-sans" style={{ color: '#1e3a8a' }}>
-            "We supply all brand screw air compressor genuine spare parts"
-          </p>
         </div>
       </div>
     </div>

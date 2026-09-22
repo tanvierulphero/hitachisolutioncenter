@@ -7,6 +7,13 @@
 
 @layer utilities {
   @media print {
+    /* Force exact color/background rendering in print dialogs */
+    html, body {
+      background-color: #ffffff !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
     /* Hide everything outside printable container */
     body * {
       visibility: hidden !important;
@@ -24,20 +31,22 @@
       position: absolute !important;
       left: 0 !important;
       top: 0 !important;
-      width: 100% !important;
-      max-width: 100% !important;
-      padding: 24px !important;
+      width: 210mm !important;
+      height: 297mm !important;
+      box-sizing: border-box !important;
+      padding: 12mm !important;
       margin: 0 !important;
       box-shadow: none !important;
       border: none !important;
       background: white !important;
-      min-height: auto !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
     }
 
     /* Page setup for A4 */
     @page {
       size: A4 portrait;
-      margin: 10mm 12mm 10mm 12mm;
+      margin: 0 !important;
     }
 
     /* Prevent breaking inside tables and signature blocks */
