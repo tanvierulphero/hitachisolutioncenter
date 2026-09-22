@@ -45,6 +45,21 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { getSupabaseConfig, saveSupabaseConfig, getSupabaseClient } from './lib/supabase';
+import { 
+  db, 
+  saveProductToCloud, 
+  deleteProductFromCloud, 
+  saveCustomerToCloud, 
+  deleteCustomerFromCloud, 
+  saveDocumentToCloud, 
+  deleteDocumentFromCloud, 
+  saveStaffUserToCloud, 
+  deleteStaffUserFromCloud, 
+  saveSettingsToCloud,
+  handleFirestoreError,
+  OperationType
+} from './lib/firebase';
+import { collection, onSnapshot, getDocs } from 'firebase/firestore';
 import Logo from './components/Logo';
 
 export default function App() {
@@ -99,15 +114,15 @@ export default function App() {
     return currentUser.permissions.includes(perm);
   };
 
-  // Load from LocalStorage
+  // Load from LocalStorage & Synchronize with Firestore
   useEffect(() => {
+    // 1. Load initial cache placeholder from LocalStorage immediately for instant UI render
     try {
       const savedStaff = localStorage.getItem('jm_staff_users');
       if (savedStaff) {
         setStaffUsers(JSON.parse(savedStaff));
       } else {
         setStaffUsers(INITIAL_STAFF_USERS);
-        localStorage.setItem('jm_staff_users', JSON.stringify(INITIAL_STAFF_USERS));
       }
 
       const savedCurrentUser = localStorage.getItem('jm_current_user');
@@ -115,66 +130,143 @@ export default function App() {
         setCurrentUser(JSON.parse(savedCurrentUser));
       } else {
         setCurrentUser(INITIAL_STAFF_USERS[0]);
-        localStorage.setItem('jm_current_user', JSON.stringify(INITIAL_STAFF_USERS[0]));
       }
 
       const savedProducts = localStorage.getItem('jm_products');
-      const savedCustomers = localStorage.getItem('jm_customers');
-      const savedDocuments = localStorage.getItem('jm_documents');
-      const savedSettings = localStorage.getItem('jm_settings');
-
       if (savedProducts) setProducts(JSON.parse(savedProducts));
-      else {
-        setProducts([]);
-        localStorage.setItem('jm_products', JSON.stringify([]));
-      }
 
+      const savedCustomers = localStorage.getItem('jm_customers');
       if (savedCustomers) setCustomers(JSON.parse(savedCustomers));
-      else {
-        setCustomers([]);
-        localStorage.setItem('jm_customers', JSON.stringify([]));
-      }
 
-      if (savedDocuments) {
-        const parsedDocs = JSON.parse(savedDocuments);
-        const migratedDocs = parsedDocs.map((d: any) => {
-          let docStr = JSON.stringify(d);
-          if (docStr.includes("Jubayer Machineries") || docStr.includes("JM/")) {
-            docStr = docStr.replaceAll("Jubayer Machineries", "hitachisolutioncenter");
-            docStr = docStr.replaceAll("JM/", "HSC/");
-            return JSON.parse(docStr);
-          }
-          return d;
-        });
-        setDocuments(migratedDocs);
-      } else {
-        setDocuments([]);
-        localStorage.setItem('jm_documents', JSON.stringify([]));
-      }
+      const savedDocuments = localStorage.getItem('jm_documents');
+      if (savedDocuments) setDocuments(JSON.parse(savedDocuments));
 
+      const savedSettings = localStorage.getItem('jm_settings');
       if (savedSettings) {
-        const parsed = JSON.parse(savedSettings);
-        const updated = {
-          ...parsed,
-          signatureName: (!parsed.signatureName || parsed.signatureName === "Md. Jubayer Ahmed") ? "MD MAHI UDDIN" : parsed.signatureName,
-          name: parsed.name === "Jubayer Machineries" ? "hitachisolutioncenter" : parsed.name,
-          email: parsed.email === "jubayermachineries@gmail.com" ? "info@hitachisolutioncenter.com" : parsed.email,
-          invoicePrefix: parsed.invoicePrefix === "JM/INV/2026/" ? "HSC/INV/2026/" : parsed.invoicePrefix,
-          quotePrefix: parsed.quotePrefix === "JM/QT/2026/" ? "HSC/QT/2026/" : parsed.quotePrefix,
-          offerPrefix: parsed.offerPrefix === "JM/OF/2026/" ? "HSC/OF/2026/" : parsed.offerPrefix,
-          billPrefix: parsed.billPrefix === "JM/BILL/2026/" ? "HSC/BILL/2026/" : parsed.billPrefix,
-        };
-        setSettings(updated);
-        setSettingsForm(updated);
-        localStorage.setItem('jm_settings', JSON.stringify(updated));
+        setSettings(JSON.parse(savedSettings));
+        setSettingsForm(JSON.parse(savedSettings));
       } else {
         setSettings(DEFAULT_SETTINGS);
         setSettingsForm(DEFAULT_SETTINGS);
-        localStorage.setItem('jm_settings', JSON.stringify(DEFAULT_SETTINGS));
       }
     } catch (e) {
-      console.error("LocalStorage load error:", e);
+      console.error("Local storage load placeholder warning:", e);
     }
+
+    // 2. Check and seed cloud database if empty
+    const initCloudDatabaseIfNeeded = async () => {
+      try {
+        const prodSnap = await getDocs(collection(db, 'products'));
+        if (prodSnap.empty) {
+          const cached = localStorage.getItem('jm_products');
+          const list = cached ? JSON.parse(cached) : INITIAL_PRODUCTS;
+          for (const item of list) {
+            await saveProductToCloud(item);
+          }
+        }
+
+        const custSnap = await getDocs(collection(db, 'customers'));
+        if (custSnap.empty) {
+          const cached = localStorage.getItem('jm_customers');
+          const list = cached ? JSON.parse(cached) : INITIAL_CUSTOMERS;
+          for (const item of list) {
+            await saveCustomerToCloud(item);
+          }
+        }
+
+        const docSnap = await getDocs(collection(db, 'documents'));
+        if (docSnap.empty) {
+          const cached = localStorage.getItem('jm_documents');
+          const list = cached ? JSON.parse(cached) : INITIAL_DOCUMENTS;
+          for (const item of list) {
+            await saveDocumentToCloud(item);
+          }
+        }
+
+        const staffSnap = await getDocs(collection(db, 'staffUsers'));
+        if (staffSnap.empty) {
+          const cached = localStorage.getItem('jm_staff_users');
+          const list = cached ? JSON.parse(cached) : INITIAL_STAFF_USERS;
+          for (const item of list) {
+            await saveStaffUserToCloud(item);
+          }
+        }
+
+        const settingsSnap = await getDocs(collection(db, 'settings'));
+        if (settingsSnap.empty) {
+          const cached = localStorage.getItem('jm_settings');
+          const data = cached ? JSON.parse(cached) : DEFAULT_SETTINGS;
+          await saveSettingsToCloud(data);
+        }
+      } catch (err) {
+        console.warn("Cloud connection error during seeding:", err);
+      }
+    };
+    initCloudDatabaseIfNeeded();
+
+    // 3. Setup real-time listeners for instant synchronization across all devices
+    const unsubscribeProducts = onSnapshot(collection(db, 'products'), (snapshot: any) => {
+      const list: Product[] = [];
+      snapshot.forEach((doc: any) => {
+        list.push(doc.data() as Product);
+      });
+      if (list.length > 0) {
+        setProducts(list);
+        localStorage.setItem('jm_products', JSON.stringify(list));
+      }
+    }, (err: any) => handleFirestoreError(err, OperationType.LIST, 'products'));
+
+    const unsubscribeCustomers = onSnapshot(collection(db, 'customers'), (snapshot: any) => {
+      const list: Customer[] = [];
+      snapshot.forEach((doc: any) => {
+        list.push(doc.data() as Customer);
+      });
+      if (list.length > 0) {
+        setCustomers(list);
+        localStorage.setItem('jm_customers', JSON.stringify(list));
+      }
+    }, (err: any) => handleFirestoreError(err, OperationType.LIST, 'customers'));
+
+    const unsubscribeDocuments = onSnapshot(collection(db, 'documents'), (snapshot: any) => {
+      const list: Document[] = [];
+      snapshot.forEach((doc: any) => {
+        list.push(doc.data() as Document);
+      });
+      if (list.length > 0) {
+        setDocuments(list);
+        localStorage.setItem('jm_documents', JSON.stringify(list));
+      }
+    }, (err: any) => handleFirestoreError(err, OperationType.LIST, 'documents'));
+
+    const unsubscribeStaff = onSnapshot(collection(db, 'staffUsers'), (snapshot: any) => {
+      const list: StaffUser[] = [];
+      snapshot.forEach((doc: any) => {
+        list.push(doc.data() as StaffUser);
+      });
+      if (list.length > 0) {
+        setStaffUsers(list);
+        localStorage.setItem('jm_staff_users', JSON.stringify(list));
+      }
+    }, (err: any) => handleFirestoreError(err, OperationType.LIST, 'staffUsers'));
+
+    const unsubscribeSettings = onSnapshot(collection(db, 'settings'), (snapshot: any) => {
+      snapshot.forEach((doc: any) => {
+        if (doc.id === 'global_settings') {
+          const data = doc.data() as BusinessSettings;
+          setSettings(data);
+          setSettingsForm(data);
+          localStorage.setItem('jm_settings', JSON.stringify(data));
+        }
+      });
+    }, (err: any) => handleFirestoreError(err, OperationType.LIST, 'settings'));
+
+    return () => {
+      unsubscribeProducts();
+      unsubscribeCustomers();
+      unsubscribeDocuments();
+      unsubscribeStaff();
+      unsubscribeSettings();
+    };
   }, []);
 
   // Staff Account Handlers
@@ -182,6 +274,7 @@ export default function App() {
     const updated = [newStaff, ...staffUsers];
     setStaffUsers(updated);
     localStorage.setItem('jm_staff_users', JSON.stringify(updated));
+    saveStaffUserToCloud(newStaff);
   };
 
   const handleUpdateStaff = (updatedStaff: StaffUser) => {
@@ -192,12 +285,14 @@ export default function App() {
       setCurrentUser(updatedStaff);
       localStorage.setItem('jm_current_user', JSON.stringify(updatedStaff));
     }
+    saveStaffUserToCloud(updatedStaff);
   };
 
   const handleDeleteStaff = (id: string) => {
     const updated = staffUsers.filter(s => s.id !== id);
     setStaffUsers(updated);
     localStorage.setItem('jm_staff_users', JSON.stringify(updated));
+    deleteStaffUserFromCloud(id);
   };
 
   const handleLoginUser = (user: StaffUser) => {
@@ -258,6 +353,12 @@ export default function App() {
       localStorage.setItem('jm_products', JSON.stringify(INITIAL_PRODUCTS));
       localStorage.setItem('jm_customers', JSON.stringify(INITIAL_CUSTOMERS));
       localStorage.setItem('jm_documents', JSON.stringify(INITIAL_DOCUMENTS));
+      
+      // Save restoration directly to cloud
+      INITIAL_PRODUCTS.forEach(p => saveProductToCloud(p));
+      INITIAL_CUSTOMERS.forEach(c => saveCustomerToCloud(c));
+      INITIAL_DOCUMENTS.forEach(d => saveDocumentToCloud(d));
+      
       alert("Sample demo data restored successfully!");
     }
   };
@@ -266,22 +367,26 @@ export default function App() {
   const handleAddProduct = (p: Product) => {
     const list = [p, ...products];
     saveProductsToDb(list);
+    saveProductToCloud(p);
   };
 
   const handleUpdateProduct = (p: Product) => {
     const list = products.map(item => item.id === p.id ? p : item);
     saveProductsToDb(list);
+    saveProductToCloud(p);
   };
 
   const handleDeleteProduct = (id: string) => {
     const list = products.filter(p => p.id !== id);
     saveProductsToDb(list);
+    deleteProductFromCloud(id);
   };
 
   // HANDLERS FOR CUSTOMERS
   const handleAddCustomer = (c: Customer) => {
     const list = [c, ...customers];
     saveCustomersToDb(list);
+    saveCustomerToCloud(c);
   };
 
   // HANDLERS FOR DOCUMENTS
@@ -294,16 +399,19 @@ export default function App() {
       list = [doc, ...documents];
     }
     saveDocumentsToDb(list);
+    saveDocumentToCloud(doc);
     
     // Decrement stock levels if a paid sales invoice is created
     if (doc.type === 'INVOICE' && doc.status === 'Paid' && !exists) {
       const updatedProducts = products.map(prod => {
         const itemInDoc = doc.items.find(it => it.productId === prod.id);
         if (itemInDoc) {
-          return {
+          const updatedProd = {
             ...prod,
             stock: Math.max(0, prod.stock - itemInDoc.quantity)
           };
+          saveProductToCloud(updatedProd);
+          return updatedProd;
         }
         return prod;
       });
@@ -319,12 +427,14 @@ export default function App() {
   const handleDeleteDocument = (id: string) => {
     const list = documents.filter(d => d.id !== id);
     saveDocumentsToDb(list);
+    deleteDocumentFromCloud(id);
   };
 
   // HANDLER FOR SETTINGS SAVE
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
     saveSettingsToDb(settingsForm);
+    saveSettingsToCloud(settingsForm);
     setSettingsSavedFeedback(true);
     setTimeout(() => setSettingsSavedFeedback(false), 3000);
   };
@@ -549,10 +659,16 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Slogan */}
-              <span className="hidden lg:inline text-xs italic text-blue-900 font-medium font-sans">
-                "Your Problem Solution is Sustainable Partner"
-              </span>
+              {/* Right Side Header Items */}
+              <div className="flex items-center gap-4">
+                <span className="hidden lg:inline text-xs italic text-blue-900 font-medium font-sans">
+                  "Your Problem Solution is Sustainable Partner"
+                </span>
+                <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[10px] font-black uppercase tracking-wider">
+                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span>
+                  Firebase Cloud Active
+                </div>
+              </div>
             </header>
 
             {/* Render Tab panels */}

@@ -1,0 +1,171 @@
+{
+  "entities": {
+    "productSpec": {
+      "title": "ProductSpec",
+      "description": "Specific specification property",
+      "type": "object",
+      "properties": {
+        "label": { "type": "string" },
+        "value": { "type": "string" }
+      },
+      "required": ["label", "value"]
+    },
+    "product": {
+      "title": "Product",
+      "description": "Hitachi Solution Center inventory product",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "sku": { "type": "string" },
+        "category": { "type": "string" },
+        "brand": { "type": "string" },
+        "price": { "type": "number" },
+        "stock": { "type": "number" },
+        "unit": { "type": "string" },
+        "description": { "type": "string" },
+        "specs": {
+          "type": "array",
+          "items": { "$ref": "#/entities/productSpec" }
+        },
+        "imageUrl": { "type": "string" }
+      },
+      "required": ["id", "name", "sku", "category", "brand", "price", "stock", "unit"]
+    },
+    "customer": {
+      "title": "Customer",
+      "description": "Customer contact metrics",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "company": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "address": { "type": "string" }
+      },
+      "required": ["id", "name", "company", "phone", "email"]
+    },
+    "documentItem": {
+      "title": "DocumentItem",
+      "description": "Line item inside a business document",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "productId": { "type": "string" },
+        "name": { "type": "string" },
+        "brand": { "type": "string" },
+        "quantity": { "type": "number" },
+        "price": { "type": "number" },
+        "total": { "type": "number" },
+        "unit": { "type": "string" }
+      },
+      "required": ["id", "name", "quantity", "price", "total"]
+    },
+    "document": {
+      "title": "Document",
+      "description": "Quotation, invoice, offer letter or bill document",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "docNumber": { "type": "string" },
+        "date": { "type": "string" },
+        "dueDate": { "type": "string" },
+        "customerId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerCompany": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "customerEmail": { "type": "string" },
+        "customerAddress": { "type": "string" },
+        "subject": { "type": "string" },
+        "salutation": { "type": "string" },
+        "openingParagraph": { "type": "string" },
+        "closingParagraph": { "type": "string" },
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/entities/documentItem" }
+        },
+        "subtotal": { "type": "number" },
+        "taxRate": { "type": "number" },
+        "taxAmount": { "type": "number" },
+        "discount": { "type": "number" },
+        "total": { "type": "number" },
+        "paidAmount": { "type": "number" },
+        "dueAmount": { "type": "number" },
+        "status": { "type": "string" },
+        "terms": { "type": "string" },
+        "notes": { "type": "string" },
+        "signatureLabel": { "type": "string" },
+        "signatureName": { "type": "string" }
+      },
+      "required": ["id", "type", "docNumber", "date", "customerId", "customerName", "subtotal", "total", "status"]
+    },
+    "staffUser": {
+      "title": "StaffUser",
+      "description": "Authorized staff sub-account",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "passcode": { "type": "string" },
+        "role": { "type": "string" },
+        "designation": { "type": "string" },
+        "status": { "type": "string" },
+        "permissions": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name", "passcode", "role", "status"]
+    },
+    "businessSettings": {
+      "title": "BusinessSettings",
+      "description": "Global business configuration settings",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "slogan": { "type": "string" },
+        "address": { "type": "string" },
+        "phone1": { "type": "string" },
+        "phone2": { "type": "string" },
+        "email": { "type": "string" },
+        "website": { "type": "string" },
+        "invoicePrefix": { "type": "string" },
+        "quotePrefix": { "type": "string" },
+        "offerPrefix": { "type": "string" },
+        "billPrefix": { "type": "string" },
+        "taxRate": { "type": "number" },
+        "terms": { "type": "string" },
+        "signatureName": { "type": "string" },
+        "signatureLabel": { "type": "string" }
+      },
+      "required": ["name", "invoicePrefix", "quotePrefix", "taxRate"]
+    }
+  },
+  "firestore": {
+    "products": {
+      "schema": "product",
+      "description": "List of inventory products"
+    },
+    "customers": {
+      "schema": "customer",
+      "description": "List of customer profiles"
+    },
+    "documents": {
+      "schema": "document",
+      "description": "List of financial or commercial documents (invoices, quotations, offer letters)"
+    },
+    "staffUsers": {
+      "schema": "staffUser",
+      "description": "List of staff sub-accounts"
+    },
+    "settings": {
+      "schema": "businessSettings",
+      "description": "Document with global business configuration parameters"
+    }
+  }
+}

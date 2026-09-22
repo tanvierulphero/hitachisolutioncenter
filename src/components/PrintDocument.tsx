@@ -220,17 +220,17 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
     const filename = `${document.docNumber}_${cleanCustomerName}.pdf`;
 
     const opt = {
-      margin: [8, 8, 8, 8], // mm
+      margin: [8, 8, 8, 8] as [number, number, number, number], // mm
       filename: filename,
-      image: { type: 'jpeg', quality: 0.98 },
+      image: { type: 'jpeg' as const, quality: 0.98 },
       html2canvas: { 
         scale: 2, 
         useCORS: true, 
         logging: false,
-        onclone: (clonedDoc: Document) => {
+        onclone: (clonedDoc: any) => {
           // 1. Sanitize all <style> tags to replace oklch/oklab syntax with standard RGB/Hex
           const styleTags = clonedDoc.querySelectorAll('style');
-          styleTags.forEach((styleTag) => {
+          styleTags.forEach((styleTag: any) => {
             if (styleTag.textContent && (styleTag.textContent.includes('oklch') || styleTag.textContent.includes('oklab'))) {
               styleTag.textContent = styleTag.textContent
                 .replace(/oklch\([^)]+\)/gi, '#1e3a8a')
@@ -266,7 +266,7 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
           const printEl = clonedDoc.getElementById('printable-area');
           if (printEl) {
             const allNodes = printEl.querySelectorAll('*');
-            allNodes.forEach((node) => {
+            allNodes.forEach((node: any) => {
               const el = node as HTMLElement;
               if (el.style) {
                 const styleAttr = el.getAttribute('style') || '';
@@ -283,7 +283,7 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
           }
         }
       },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
     };
 
     try {

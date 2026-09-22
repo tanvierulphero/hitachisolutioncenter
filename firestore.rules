@@ -1,0 +1,95 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 1. Global Safety Net (Deny everything by default)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper to validate document IDs
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Validation blueprints for entities
+    function isValidProduct(p) {
+      return p.keys().hasAll(['id', 'name', 'sku', 'category', 'brand', 'price', 'stock', 'unit'])
+        && p.keys().hasOnly(['id', 'name', 'sku', 'category', 'brand', 'price', 'stock', 'unit', 'description', 'specs', 'imageUrl'])
+        && p.id is string && p.id.size() <= 128
+        && p.name is string && p.name.size() <= 200
+        && p.sku is string && p.sku.size() <= 100
+        && p.category is string && p.category.size() <= 100
+        && p.brand is string && p.brand.size() <= 100
+        && p.price is number && p.price >= 0
+        && p.stock is number && p.stock >= 0
+        && p.unit is string && p.unit.size() <= 50;
+    }
+
+    function isValidCustomer(c) {
+      return c.keys().hasAll(['id', 'name', 'company', 'phone', 'email'])
+        && c.keys().hasOnly(['id', 'name', 'company', 'phone', 'email', 'address'])
+        && c.id is string && c.id.size() <= 128
+        && c.name is string && c.name.size() <= 150
+        && c.company is string && c.company.size() <= 200
+        && c.phone is string && c.phone.size() <= 50
+        && c.email is string && c.email.size() <= 150;
+    }
+
+    function isValidDocument(d) {
+      return d.keys().hasAll(['id', 'type', 'docNumber', 'date', 'customerId', 'customerName', 'subtotal', 'total', 'status'])
+        && d.id is string && d.id.size() <= 128
+        && d.type is string && d.type.size() <= 50
+        && d.docNumber is string && d.docNumber.size() <= 100
+        && d.date is string && d.date.size() <= 50
+        && d.customerId is string && d.customerId.size() <= 128
+        && d.customerName is string && d.customerName.size() <= 150
+        && d.subtotal is number && d.subtotal >= 0
+        && d.total is number && d.total >= 0
+        && d.status is string && d.status.size() <= 50;
+    }
+
+    function isValidStaffUser(s) {
+      return s.keys().hasAll(['id', 'name', 'passcode', 'role', 'status'])
+        && s.id is string && s.id.size() <= 128
+        && s.name is string && s.name.size() <= 150
+        && s.passcode is string && s.passcode.size() <= 100
+        && s.role is string && s.role.size() <= 50
+        && s.status is string && s.status.size() <= 50;
+    }
+
+    function isValidBusinessSettings(b) {
+      return b.keys().hasAll(['name', 'invoicePrefix', 'quotePrefix', 'taxRate'])
+        && b.name is string && b.name.size() <= 200
+        && b.invoicePrefix is string && b.invoicePrefix.size() <= 50
+        && b.quotePrefix is string && b.quotePrefix.size() <= 50
+        && b.taxRate is number && b.taxRate >= 0;
+    }
+
+    // Collection Rules with strict schema boundaries
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isValidId(productId) && (request.method == 'delete' || isValidProduct(request.resource.data));
+    }
+
+    match /customers/{customerId} {
+      allow read: if true;
+      allow write: if isValidId(customerId) && (request.method == 'delete' || isValidCustomer(request.resource.data));
+    }
+
+    match /documents/{documentId} {
+      allow read: if true;
+      allow write: if isValidId(documentId) && (request.method == 'delete' || isValidDocument(request.resource.data));
+    }
+
+    match /staffUsers/{staffUserId} {
+      allow read: if true;
+      allow write: if isValidId(staffUserId) && (request.method == 'delete' || isValidStaffUser(request.resource.data));
+    }
+
+    match /settings/{settingsId} {
+      allow read: if true;
+      allow write: if isValidId(settingsId) && (request.method == 'delete' || isValidBusinessSettings(request.resource.data));
+    }
+  }
+}
