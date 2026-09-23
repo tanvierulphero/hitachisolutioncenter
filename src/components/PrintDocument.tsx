@@ -227,12 +227,9 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
           className="bg-white shadow-xl rounded-lg p-8 md:p-10 text-slate-800 watermark-container flex flex-col justify-between border border-slate-100 relative print-container mx-auto"
           style={{ width: '210mm', minWidth: '210mm', minHeight: '297mm', boxSizing: 'border-box' }}
         >
-          {/* Inline DOM vector watermark for 100% PDF/Print Rendering support */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] h-[320px] pointer-events-none select-none z-0 opacity-[0.035]" style={{ color: '#1e3a8a', opacity: 0.035 }}>
-            <svg viewBox="0 0 100 100" fill="currentColor" className="w-full h-full">
-              <path d="M50,15A35,35 0 1,0 85,50A35,35 0 0,0 50,15 M50,30 A20,20 0 1,1 30,50 A20,20 0 0,1 50,30" />
-              <path d="M50,5 L46,15 L54,15 Z M50,95 L46,85 L54,85 Z M5,50 L15,46 L15,54 Z M95,50 L85,46 L85,54 Z M18,18 L25,25 L21,29 Z M82,82 L75,75 L79,71 Z M18,82 L25,75 L21,71 Z M82,18 L75,25 L79,29 Z" />
-            </svg>
+          {/* Header Logo background watermark for crisp PDF/Print support */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] max-w-[85%] pointer-events-none select-none z-0" style={{ color: '#1e3a8a', opacity: 0.04 }}>
+            <Logo className="w-full h-auto text-blue-900" />
           </div>
           <div className="relative z-10 flex flex-col justify-between h-full">
             {/* Header Block matching uploaded image */}
