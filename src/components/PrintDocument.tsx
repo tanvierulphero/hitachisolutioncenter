@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Document, BusinessSettings } from '../types';
 import { Mail, Phone, Globe, MapPin, Printer, Download, ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
 import Logo from './Logo';
+// @ts-ignore
+import html2pdf from 'html2pdf.js';
 
 interface PrintDocumentProps {
   document: Document;
@@ -126,6 +128,7 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
         useCORS: true, 
         logging: false,
         onclone: (clonedDoc: any) => {
+          // 1. Setup exact A4 page sizing on the cloned printable area
           const printEl = clonedDoc.getElementById('printable-area');
           if (printEl) {
             printEl.style.width = '210mm';
@@ -137,21 +140,59 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
             printEl.style.boxSizing = 'border-box';
             printEl.style.backgroundColor = '#ffffff';
           }
+
+          // 2. Overwrite oklch/oklab CSS variables and styles with hex fallbacks to prevent html2canvas from crashing
+          const styleTags = clonedDoc.querySelectorAll('style');
+          styleTags.forEach((styleTag: any) => {
+            if (styleTag.textContent) {
+              styleTag.textContent = styleTag.textContent
+                .replace(/oklch\([^)]+\)/gi, '#1e3a8a')
+                .replace(/oklab\([^)]+\)/gi, '#1e3a8a');
+            }
+          });
+
+          const overrideStyle = clonedDoc.createElement('style');
+          overrideStyle.textContent = `
+            :root, * {
+              --color-blue-50: #eff6ff !important;
+              --color-blue-100: #dbeafe !important;
+              --color-blue-600: #2563eb !important;
+              --color-blue-700: #1d4ed8 !important;
+              --color-blue-800: #1e40af !important;
+              --color-blue-900: #1e3a8a !important;
+              --color-slate-50: #f8fafc !important;
+              --color-slate-100: #f1f5f9 !important;
+              --color-slate-200: #e2e8f0 !important;
+              --color-slate-300: #cbd5e1 !important;
+              --color-slate-400: #94a3b8 !important;
+              --color-slate-500: #64748b !important;
+              --color-slate-600: #475569 !important;
+              --color-slate-700: #334155 !important;
+              --color-slate-800: #1e293b !important;
+              --color-slate-900: #0f172a !important;
+            }
+          `;
+          clonedDoc.head.appendChild(overrideStyle);
         }
       },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
     };
 
     try {
-      // Access the globally loaded production html2pdf bundle
-      const html2pdfFunc = (window as any).html2pdf;
+      // 1. Resolve robustly via direct ESM/CommonJS import
+      let html2pdfFunc = (html2pdf as any)?.default || html2pdf;
+
+      // 2. Fall back to globally loaded CDN version if needed
+      if (typeof html2pdfFunc !== 'function') {
+        html2pdfFunc = (window as any).html2pdf;
+      }
       
       if (typeof html2pdfFunc === 'function') {
         await html2pdfFunc().set(opt).from(element).save();
         setPdfSuccessNotice(true);
         setTimeout(() => setPdfSuccessNotice(false), 4000);
       } else {
-        console.warn('html2pdf was not found on window, calling window.print()');
+        console.warn('html2pdf was not found as a function, calling window.print()');
         window.print();
       }
     } catch (err) {
