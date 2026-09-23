@@ -24,41 +24,33 @@ import {
   BarChart3, 
   ShoppingCart, 
   FileSpreadsheet, 
-  Wrench, 
-  FolderLock, 
-  LogOut, 
   Globe, 
   FileText, 
-  Building2, 
   Sliders, 
   Save, 
-  Clock,
-  BookOpen,
-  Users,
   ShieldCheck,
   UserCheck,
   Trash2,
   RotateCcw,
   Database,
-  CloudCheck,
-  Key,
-  CheckCircle2
+  FolderLock
 } from 'lucide-react';
 import { 
-  db, 
-  saveProductToCloud, 
-  deleteProductFromCloud, 
-  saveCustomerToCloud, 
-  deleteCustomerFromCloud, 
-  saveDocumentToCloud, 
-  deleteDocumentFromCloud, 
-  saveStaffUserToCloud, 
-  deleteStaffUserFromCloud, 
-  saveSettingsToCloud,
-  handleFirestoreError,
-  OperationType
-} from './lib/firebase';
-import { collection, onSnapshot, getDocs } from 'firebase/firestore';
+  apiGetProducts,
+  apiSaveProduct,
+  apiDeleteProduct,
+  apiGetCustomers,
+  apiSaveCustomer,
+  apiDeleteCustomer,
+  apiGetDocuments,
+  apiSaveDocument,
+  apiDeleteDocument,
+  apiGetStaff,
+  apiSaveStaff,
+  apiDeleteStaff,
+  apiGetSettings,
+  apiSaveSettings
+} from './lib/api';
 import Logo from './components/Logo';
 
 export default function App() {
@@ -93,185 +85,75 @@ export default function App() {
     return currentUser.permissions.includes(perm);
   };
 
-  // Load from LocalStorage & Synchronize with Firestore
-  useEffect(() => {
-    // 1. Load initial cache placeholder from LocalStorage immediately for instant UI render
+  // Fetch all data from Cloud SQL Database on load
+  const loadCloudSqlData = async () => {
     try {
-      const savedStaff = localStorage.getItem('jm_staff_users');
-      if (savedStaff) {
-        setStaffUsers(JSON.parse(savedStaff));
-      } else {
-        setStaffUsers(INITIAL_STAFF_USERS);
-      }
+      const [prods, custs, docs, staff, setts] = await Promise.all([
+        apiGetProducts().catch(() => INITIAL_PRODUCTS),
+        apiGetCustomers().catch(() => INITIAL_CUSTOMERS),
+        apiGetDocuments().catch(() => INITIAL_DOCUMENTS),
+        apiGetStaff().catch(() => INITIAL_STAFF_USERS),
+        apiGetSettings().catch(() => DEFAULT_SETTINGS),
+      ]);
 
+      setProducts(prods);
+      setCustomers(custs);
+      setDocuments(docs);
+      setStaffUsers(staff.length > 0 ? staff : INITIAL_STAFF_USERS);
+      setSettings(setts);
+      setSettingsForm(setts);
+
+      // Current active user restoration
       const savedCurrentUser = localStorage.getItem('jm_current_user');
       if (savedCurrentUser) {
         setCurrentUser(JSON.parse(savedCurrentUser));
+      } else if (staff.length > 0) {
+        setCurrentUser(staff[0]);
       } else {
         setCurrentUser(INITIAL_STAFF_USERS[0]);
       }
-
-      const savedProducts = localStorage.getItem('jm_products');
-      if (savedProducts) setProducts(JSON.parse(savedProducts));
-
-      const savedCustomers = localStorage.getItem('jm_customers');
-      if (savedCustomers) setCustomers(JSON.parse(savedCustomers));
-
-      const savedDocuments = localStorage.getItem('jm_documents');
-      if (savedDocuments) setDocuments(JSON.parse(savedDocuments));
-
-      const savedSettings = localStorage.getItem('jm_settings');
-      if (savedSettings) {
-        setSettings(JSON.parse(savedSettings));
-        setSettingsForm(JSON.parse(savedSettings));
-      } else {
-        setSettings(DEFAULT_SETTINGS);
-        setSettingsForm(DEFAULT_SETTINGS);
-      }
     } catch (e) {
-      console.error("Local storage load placeholder warning:", e);
+      console.error('Cloud SQL initial fetch warning:', e);
     }
+  };
 
-    // 2. Check and seed cloud database if empty
-    const initCloudDatabaseIfNeeded = async () => {
-      try {
-        const prodSnap = await getDocs(collection(db, 'products'));
-        if (prodSnap.empty) {
-          const cached = localStorage.getItem('jm_products');
-          const list = cached ? JSON.parse(cached) : INITIAL_PRODUCTS;
-          for (const item of list) {
-            await saveProductToCloud(item);
-          }
-        }
-
-        const custSnap = await getDocs(collection(db, 'customers'));
-        if (custSnap.empty) {
-          const cached = localStorage.getItem('jm_customers');
-          const list = cached ? JSON.parse(cached) : INITIAL_CUSTOMERS;
-          for (const item of list) {
-            await saveCustomerToCloud(item);
-          }
-        }
-
-        const docSnap = await getDocs(collection(db, 'documents'));
-        if (docSnap.empty) {
-          const cached = localStorage.getItem('jm_documents');
-          const list = cached ? JSON.parse(cached) : INITIAL_DOCUMENTS;
-          for (const item of list) {
-            await saveDocumentToCloud(item);
-          }
-        }
-
-        const staffSnap = await getDocs(collection(db, 'staffUsers'));
-        if (staffSnap.empty) {
-          const cached = localStorage.getItem('jm_staff_users');
-          const list = cached ? JSON.parse(cached) : INITIAL_STAFF_USERS;
-          for (const item of list) {
-            await saveStaffUserToCloud(item);
-          }
-        }
-
-        const settingsSnap = await getDocs(collection(db, 'settings'));
-        if (settingsSnap.empty) {
-          const cached = localStorage.getItem('jm_settings');
-          const data = cached ? JSON.parse(cached) : DEFAULT_SETTINGS;
-          await saveSettingsToCloud(data);
-        }
-      } catch (err) {
-        console.warn("Cloud connection error during seeding:", err);
-      }
-    };
-    initCloudDatabaseIfNeeded();
-
-    // 3. Setup real-time listeners for instant synchronization across all devices
-    const unsubscribeProducts = onSnapshot(collection(db, 'products'), (snapshot: any) => {
-      const list: Product[] = [];
-      snapshot.forEach((doc: any) => {
-        list.push(doc.data() as Product);
-      });
-      if (list.length > 0) {
-        setProducts(list);
-        localStorage.setItem('jm_products', JSON.stringify(list));
-      }
-    }, (err: any) => handleFirestoreError(err, OperationType.LIST, 'products'));
-
-    const unsubscribeCustomers = onSnapshot(collection(db, 'customers'), (snapshot: any) => {
-      const list: Customer[] = [];
-      snapshot.forEach((doc: any) => {
-        list.push(doc.data() as Customer);
-      });
-      if (list.length > 0) {
-        setCustomers(list);
-        localStorage.setItem('jm_customers', JSON.stringify(list));
-      }
-    }, (err: any) => handleFirestoreError(err, OperationType.LIST, 'customers'));
-
-    const unsubscribeDocuments = onSnapshot(collection(db, 'documents'), (snapshot: any) => {
-      const list: Document[] = [];
-      snapshot.forEach((doc: any) => {
-        list.push(doc.data() as Document);
-      });
-      if (list.length > 0) {
-        setDocuments(list);
-        localStorage.setItem('jm_documents', JSON.stringify(list));
-      }
-    }, (err: any) => handleFirestoreError(err, OperationType.LIST, 'documents'));
-
-    const unsubscribeStaff = onSnapshot(collection(db, 'staffUsers'), (snapshot: any) => {
-      const list: StaffUser[] = [];
-      snapshot.forEach((doc: any) => {
-        list.push(doc.data() as StaffUser);
-      });
-      if (list.length > 0) {
-        setStaffUsers(list);
-        localStorage.setItem('jm_staff_users', JSON.stringify(list));
-      }
-    }, (err: any) => handleFirestoreError(err, OperationType.LIST, 'staffUsers'));
-
-    const unsubscribeSettings = onSnapshot(collection(db, 'settings'), (snapshot: any) => {
-      snapshot.forEach((doc: any) => {
-        if (doc.id === 'global_settings') {
-          const data = doc.data() as BusinessSettings;
-          setSettings(data);
-          setSettingsForm(data);
-          localStorage.setItem('jm_settings', JSON.stringify(data));
-        }
-      });
-    }, (err: any) => handleFirestoreError(err, OperationType.LIST, 'settings'));
-
-    return () => {
-      unsubscribeProducts();
-      unsubscribeCustomers();
-      unsubscribeDocuments();
-      unsubscribeStaff();
-      unsubscribeSettings();
-    };
+  useEffect(() => {
+    loadCloudSqlData();
   }, []);
 
   // Staff Account Handlers
-  const handleAddStaff = (newStaff: StaffUser) => {
+  const handleAddStaff = async (newStaff: StaffUser) => {
     const updated = [newStaff, ...staffUsers];
     setStaffUsers(updated);
-    localStorage.setItem('jm_staff_users', JSON.stringify(updated));
-    saveStaffUserToCloud(newStaff);
+    try {
+      await apiSaveStaff(newStaff);
+    } catch (e) {
+      console.error('Failed to save staff to Cloud SQL:', e);
+    }
   };
 
-  const handleUpdateStaff = (updatedStaff: StaffUser) => {
+  const handleUpdateStaff = async (updatedStaff: StaffUser) => {
     const updated = staffUsers.map(s => s.id === updatedStaff.id ? updatedStaff : s);
     setStaffUsers(updated);
-    localStorage.setItem('jm_staff_users', JSON.stringify(updated));
     if (currentUser?.id === updatedStaff.id) {
       setCurrentUser(updatedStaff);
       localStorage.setItem('jm_current_user', JSON.stringify(updatedStaff));
     }
-    saveStaffUserToCloud(updatedStaff);
+    try {
+      await apiSaveStaff(updatedStaff);
+    } catch (e) {
+      console.error('Failed to update staff in Cloud SQL:', e);
+    }
   };
 
-  const handleDeleteStaff = (id: string) => {
+  const handleDeleteStaff = async (id: string) => {
     const updated = staffUsers.filter(s => s.id !== id);
     setStaffUsers(updated);
-    localStorage.setItem('jm_staff_users', JSON.stringify(updated));
-    deleteStaffUserFromCloud(id);
+    try {
+      await apiDeleteStaff(id);
+    } catch (e) {
+      console.error('Failed to delete staff from Cloud SQL:', e);
+    }
   };
 
   const handleLoginUser = (user: StaffUser) => {
@@ -289,87 +171,87 @@ export default function App() {
     else if (user.permissions.includes('manage_settings')) setActiveTab('settings');
   };
 
-  // Save list state helpers
-  const saveProductsToDb = (newProducts: Product[]) => {
-    setProducts(newProducts);
-    localStorage.setItem('jm_products', JSON.stringify(newProducts));
-  };
-
-  const saveCustomersToDb = (newCustomers: Customer[]) => {
-    setCustomers(newCustomers);
-    localStorage.setItem('jm_customers', JSON.stringify(newCustomers));
-  };
-
-  const saveDocumentsToDb = (newDocs: Document[]) => {
-    setDocuments(newDocs);
-    localStorage.setItem('jm_documents', JSON.stringify(newDocs));
-  };
-
-  const saveSettingsToDb = (newSettings: BusinessSettings) => {
-    setSettings(newSettings);
-    localStorage.setItem('jm_settings', JSON.stringify(newSettings));
-  };
-
   // Clear All Data Handler (for fresh entry)
-  const handleClearAllData = () => {
-    if (window.confirm("Are you sure you want to clear ALL documents, inventory items, and customer records? This will delete all sample data so you can start fresh.")) {
-      setProducts([]);
-      setCustomers([]);
-      setDocuments([]);
-      localStorage.setItem('jm_products', JSON.stringify([]));
-      localStorage.setItem('jm_customers', JSON.stringify([]));
-      localStorage.setItem('jm_documents', JSON.stringify([]));
-      alert("Database cleared successfully! You can now start entering your own products, customers, and documents.");
+  const handleClearAllData = async () => {
+    if (window.confirm("Are you sure you want to clear ALL documents, inventory items, and customer records in Cloud SQL?")) {
+      try {
+        for (const p of products) await apiDeleteProduct(p.id).catch(() => {});
+        for (const c of customers) await apiDeleteCustomer(c.id).catch(() => {});
+        for (const d of documents) await apiDeleteDocument(d.id).catch(() => {});
+        setProducts([]);
+        setCustomers([]);
+        setDocuments([]);
+        alert("Cloud SQL Database cleared successfully!");
+      } catch (e) {
+        alert("Error clearing database. Please try again.");
+      }
     }
   };
 
   // Restore Sample Demo Data Handler
-  const handleRestoreSampleData = () => {
-    if (window.confirm("Restore sample demo products, customers, and documents?")) {
-      setProducts(INITIAL_PRODUCTS);
-      setCustomers(INITIAL_CUSTOMERS);
-      setDocuments(INITIAL_DOCUMENTS);
-      localStorage.setItem('jm_products', JSON.stringify(INITIAL_PRODUCTS));
-      localStorage.setItem('jm_customers', JSON.stringify(INITIAL_CUSTOMERS));
-      localStorage.setItem('jm_documents', JSON.stringify(INITIAL_DOCUMENTS));
-      
-      // Save restoration directly to cloud
-      INITIAL_PRODUCTS.forEach(p => saveProductToCloud(p));
-      INITIAL_CUSTOMERS.forEach(c => saveCustomerToCloud(c));
-      INITIAL_DOCUMENTS.forEach(d => saveDocumentToCloud(d));
-      
-      alert("Sample demo data restored successfully!");
+  const handleRestoreSampleData = async () => {
+    if (window.confirm("Restore sample demo products, customers, and documents to Cloud SQL?")) {
+      try {
+        setProducts(INITIAL_PRODUCTS);
+        setCustomers(INITIAL_CUSTOMERS);
+        setDocuments(INITIAL_DOCUMENTS);
+
+        for (const p of INITIAL_PRODUCTS) await apiSaveProduct(p);
+        for (const c of INITIAL_CUSTOMERS) await apiSaveCustomer(c);
+        for (const d of INITIAL_DOCUMENTS) await apiSaveDocument(d);
+
+        alert("Sample demo data restored successfully to Cloud SQL!");
+      } catch (e) {
+        console.error('Error restoring sample data:', e);
+        alert('Error restoring demo data.');
+      }
     }
   };
 
   // HANDLERS FOR INVENTORY / PRODUCTS
-  const handleAddProduct = (p: Product) => {
+  const handleAddProduct = async (p: Product) => {
     const list = [p, ...products];
-    saveProductsToDb(list);
-    saveProductToCloud(p);
+    setProducts(list);
+    try {
+      await apiSaveProduct(p);
+    } catch (e) {
+      console.error('Failed to save product:', e);
+    }
   };
 
-  const handleUpdateProduct = (p: Product) => {
+  const handleUpdateProduct = async (p: Product) => {
     const list = products.map(item => item.id === p.id ? p : item);
-    saveProductsToDb(list);
-    saveProductToCloud(p);
+    setProducts(list);
+    try {
+      await apiSaveProduct(p);
+    } catch (e) {
+      console.error('Failed to update product:', e);
+    }
   };
 
-  const handleDeleteProduct = (id: string) => {
+  const handleDeleteProduct = async (id: string) => {
     const list = products.filter(p => p.id !== id);
-    saveProductsToDb(list);
-    deleteProductFromCloud(id);
+    setProducts(list);
+    try {
+      await apiDeleteProduct(id);
+    } catch (e) {
+      console.error('Failed to delete product:', e);
+    }
   };
 
   // HANDLERS FOR CUSTOMERS
-  const handleAddCustomer = (c: Customer) => {
+  const handleAddCustomer = async (c: Customer) => {
     const list = [c, ...customers];
-    saveCustomersToDb(list);
-    saveCustomerToCloud(c);
+    setCustomers(list);
+    try {
+      await apiSaveCustomer(c);
+    } catch (e) {
+      console.error('Failed to save customer:', e);
+    }
   };
 
   // HANDLERS FOR DOCUMENTS
-  const handleSaveDocument = (doc: Document) => {
+  const handleSaveDocument = async (doc: Document) => {
     let list = [...documents];
     const exists = documents.some(d => d.id === doc.id);
     if (exists) {
@@ -377,8 +259,13 @@ export default function App() {
     } else {
       list = [doc, ...documents];
     }
-    saveDocumentsToDb(list);
-    saveDocumentToCloud(doc);
+    setDocuments(list);
+
+    try {
+      await apiSaveDocument(doc);
+    } catch (e) {
+      console.error('Failed to save document:', e);
+    }
     
     // Decrement stock levels if a paid sales invoice is created
     if (doc.type === 'INVOICE' && doc.status === 'Paid' && !exists) {
@@ -389,12 +276,12 @@ export default function App() {
             ...prod,
             stock: Math.max(0, prod.stock - itemInDoc.quantity)
           };
-          saveProductToCloud(updatedProd);
+          apiSaveProduct(updatedProd).catch(() => {});
           return updatedProd;
         }
         return prod;
       });
-      saveProductsToDb(updatedProducts);
+      setProducts(updatedProducts);
     }
 
     setEditingDocument(null);
@@ -403,19 +290,28 @@ export default function App() {
     setViewingDocument(doc); // View the printable layout immediately!
   };
 
-  const handleDeleteDocument = (id: string) => {
+  const handleDeleteDocument = async (id: string) => {
     const list = documents.filter(d => d.id !== id);
-    saveDocumentsToDb(list);
-    deleteDocumentFromCloud(id);
+    setDocuments(list);
+    try {
+      await apiDeleteDocument(id);
+    } catch (e) {
+      console.error('Failed to delete document:', e);
+    }
   };
 
   // HANDLER FOR SETTINGS SAVE
-  const handleSaveSettings = (e: React.FormEvent) => {
+  const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    saveSettingsToDb(settingsForm);
-    saveSettingsToCloud(settingsForm);
-    setSettingsSavedFeedback(true);
-    setTimeout(() => setSettingsSavedFeedback(false), 3000);
+    setSettings(settingsForm);
+    try {
+      await apiSaveSettings(settingsForm);
+      setSettingsSavedFeedback(true);
+      setTimeout(() => setSettingsSavedFeedback(false), 3000);
+    } catch (err) {
+      console.error('Failed to save settings:', err);
+      alert('Error saving settings to database.');
+    }
   };
 
   // Quick helper to logout / reset view
@@ -555,7 +451,7 @@ export default function App() {
                         : 'hover:bg-slate-800 hover:text-slate-100'
                     }`}
                   >
-                    <BookOpen className="w-4 h-4 text-rose-400 animate-pulse" />
+                    <FileText className="w-4 h-4 text-rose-400" />
                     Due Ledger
                   </button>
                 )}
@@ -643,9 +539,9 @@ export default function App() {
                 <span className="hidden lg:inline text-xs italic text-blue-900 font-medium font-sans">
                   "Your Problem Solution is Sustainable Partner"
                 </span>
-                <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[10px] font-black uppercase tracking-wider">
-                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span>
-                  Firebase Cloud Active
+                <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-[10px] font-black uppercase tracking-wider">
+                  <Database className="w-3 h-3 text-blue-600" />
+                  Cloud SQL MySQL / Postgres Active
                 </div>
               </div>
             </header>
@@ -900,7 +796,7 @@ export default function App() {
                         {/* Feedback messages */}
                         {settingsSavedFeedback && (
                           <p className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 p-2 rounded-lg text-center">
-                            Showroom Settings Saved & Synced Successfully.
+                            Showroom Settings Saved & Synced Successfully to Cloud SQL.
                           </p>
                         )}
 
@@ -928,10 +824,10 @@ export default function App() {
                     <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-6 mt-6 space-y-4">
                       <div className="flex items-center gap-2 text-rose-700 font-bold">
                         <Trash2 className="w-5 h-5" />
-                        <h3 className="text-base">Database & Sample Data Management</h3>
+                        <h3 className="text-base">Cloud SQL Database & Sample Data Management</h3>
                       </div>
                       <p className="text-xs text-slate-500 font-medium">
-                        Wipe current sample items, customer lists, and documents to start fresh with clean data entry, or restore original demo data.
+                        Wipe current sample items, customer lists, and documents from Cloud SQL database to start fresh with clean data entry, or restore original demo data.
                       </p>
                       
                       <div className="flex flex-wrap gap-3 pt-2">
@@ -963,7 +859,7 @@ export default function App() {
 
             {/* Admin page copyright */}
             <footer className="bg-white border-t border-slate-200 py-4 px-8 flex justify-between items-center text-[10px] text-slate-400 font-bold uppercase tracking-wider font-mono">
-              <span>hitachisolutioncenter Dashboard &bull; All changes saved in local cache</span>
+              <span>hitachisolutioncenter Dashboard &bull; Cloud SQL Relational Database Active</span>
               <span>"Your Problem Solution is Sustainable Partner"</span>
             </footer>
           </main>
