@@ -151,6 +151,14 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
             }
           });
 
+          // 3. Remove letterSpacing styles from SVG text elements to prevent html2canvas from crashing on inline SVG parameters
+          const svgTexts = clonedDoc.querySelectorAll('svg text');
+          svgTexts.forEach((textNode: any) => {
+            if (textNode.style) {
+              textNode.style.letterSpacing = '';
+            }
+          });
+
           const overrideStyle = clonedDoc.createElement('style');
           overrideStyle.textContent = `
             :root, * {
@@ -192,12 +200,12 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
         setPdfSuccessNotice(true);
         setTimeout(() => setPdfSuccessNotice(false), 4000);
       } else {
-        console.warn('html2pdf was not found as a function, calling window.print()');
-        window.print();
+        console.warn('html2pdf was not found as a function');
+        alert('Could not download PDF directly. Please ensure your internet connection is active.');
       }
     } catch (err) {
       console.error('PDF export error:', err);
-      window.print();
+      alert('An error occurred while generating the PDF file.');
     } finally {
       setIsGeneratingPdf(false);
     }
@@ -233,7 +241,7 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
             Print Document
           </button>
 
-          {/* Save as PDF Button */}
+          {/* Download PDF Button */}
           <button
             onClick={handleSavePdf}
             disabled={isGeneratingPdf}
@@ -243,12 +251,12 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
             {isGeneratingPdf ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin text-blue-300" />
-                Generating PDF...
+                Downloading PDF...
               </>
             ) : (
               <>
                 <Download className="w-4 h-4 text-blue-300" />
-                Save as PDF
+                download PDF
               </>
             )}
           </button>
