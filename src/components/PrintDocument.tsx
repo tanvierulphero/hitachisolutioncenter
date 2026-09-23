@@ -104,15 +104,22 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
     window.print();
   };
 
-  // Download PDF file directly using CDN loaded html2pdf.js
+  // Download PDF file directly using CDN or bundled html2pdf.js
   const handleSavePdf = async () => {
+    if (isGeneratingPdf) return;
     setIsGeneratingPdf(true);
     setPdfSuccessNotice(false);
+
+    // Fail-safe timeout to guarantee isGeneratingPdf is reset no matter what happens
+    const safetyTimeout = setTimeout(() => {
+      setIsGeneratingPdf(false);
+    }, 6000);
 
     const element = window.document.getElementById('printable-area');
     if (!element) {
       setIsGeneratingPdf(false);
-      window.print();
+      clearTimeout(safetyTimeout);
+      alert('Printable document area not found.');
       return;
     }
 
@@ -120,20 +127,22 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
     const filename = `${document.docNumber}_${cleanCustomerName}.pdf`;
 
     const opt = {
-      margin: [12.7, 12.7, 12.7, 12.7] as [number, number, number, number], // Exactly 0.5 inches in mm
+      margin: 0, // Controlled 100% exactly via padding inside onclone for pixel-perfect 1:1 scale
       filename: filename,
       image: { type: 'jpeg' as const, quality: 0.98 },
       html2canvas: { 
         scale: 2, 
         useCORS: true, 
         logging: false,
+        width: 794, // Standard 210mm A4 width in pixels at 96 DPI
+        windowWidth: 794, // Force desktop viewport layout rendering
         onclone: (clonedDoc: any) => {
-          // 1. Setup exact dimensions matching 0.5 in margins on standard A4 (210 - 25.4 = 184.6mm wide; 297 - 25.4 = 271.6mm high)
+          // 1. Setup exact dimensions matching standard A4 (210mm x 297mm) with exactly 0.5 in (12.7mm) padding margins
           const printEl = clonedDoc.getElementById('printable-area');
           if (printEl) {
-            printEl.style.width = '184.6mm';
-            printEl.style.height = '271.6mm';
-            printEl.style.padding = '0';
+            printEl.style.width = '210mm';
+            printEl.style.height = '297mm';
+            printEl.style.padding = '12.7mm'; // Exactly 0.5 in padding margins
             printEl.style.margin = '0';
             printEl.style.boxShadow = 'none';
             printEl.style.border = 'none';
@@ -141,7 +150,7 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
             printEl.style.backgroundColor = '#ffffff';
           }
 
-          // 2. Overwrite oklch/oklab CSS variables and styles with hex fallbacks to prevent html2canvas from crashing
+          // 2. Overwrite oklch/oklab CSS variables and styles ONLY in the cloned document to prevent html2canvas crashing
           const styleTags = clonedDoc.querySelectorAll('style');
           styleTags.forEach((styleTag: any) => {
             if (styleTag.textContent) {
@@ -151,7 +160,7 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
             }
           });
 
-          // 3. Remove letterSpacing styles from SVG text elements to prevent html2canvas from crashing on inline SVG parameters
+          // 3. Remove letterSpacing styles from SVG text elements in cloned document
           const svgTexts = clonedDoc.querySelectorAll('svg text');
           svgTexts.forEach((textNode: any) => {
             if (textNode.style) {
@@ -159,6 +168,7 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
             }
           });
 
+          // 4. Inject explicit color variable fallbacks inside cloned document
           const overrideStyle = clonedDoc.createElement('style');
           overrideStyle.textContent = `
             :root, * {
@@ -207,6 +217,7 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
       console.error('PDF export error:', err);
       alert('An error occurred while generating the PDF file.');
     } finally {
+      clearTimeout(safetyTimeout);
       setIsGeneratingPdf(false);
     }
   };
@@ -288,7 +299,7 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
         </div>
         <div className="relative z-10 flex flex-col justify-between h-full">
           {/* Header Block matching uploaded image */}
-          <div className="flex flex-col md:flex-row items-center justify-between pb-5 mb-8" style={{ borderBottom: '2px solid #1e3a8a' }}>
+          <div className="flex flex-col md:flex-row items-center justify-between pb-4 mb-4" style={{ borderBottom: '2px solid #1e3a8a' }}>
             {/* Left Brand Identity */}
             <div className="flex items-center gap-4 mb-4 md:mb-0 h-16 w-auto">
               <Logo className="h-full w-auto text-blue-900" />
@@ -319,7 +330,7 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
           </div>
 
           {/* Document Title Bar */}
-          <div className="flex justify-between items-center bg-slate-100 px-4 py-2.5 rounded mb-6" style={{ backgroundColor: '#f1f5f9', borderLeft: '4px solid #1e3a8a' }}>
+          <div className="flex justify-between items-center bg-slate-100 px-4 py-2.5 rounded mb-4" style={{ backgroundColor: '#f1f5f9', borderLeft: '4px solid #1e3a8a' }}>
             <span className="text-sm font-bold text-blue-900 font-display uppercase tracking-wider" style={{ color: '#1e3a8a' }}>
               {getDocTitle()}
             </span>
@@ -333,7 +344,7 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
           </div>
 
           {/* Customer Metadata Block */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 text-xs leading-relaxed pb-6" style={{ borderBottom: '1px solid #cbd5e1' }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 text-xs leading-relaxed pb-4" style={{ borderBottom: '1px solid #cbd5e1' }}>
             <div>
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2" style={{ color: '#94a3b8' }}>Recipient / Client:</h3>
               <p className="text-sm font-bold text-slate-900 font-display">{document.customerName}</p>
@@ -375,7 +386,7 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
 
           {/* DOCUMENT ITEMS TABLE */}
           {document.items && document.items.length > 0 ? (
-            <div className="overflow-x-auto mb-8 relative z-10">
+            <div className="overflow-x-auto mb-4 relative z-10">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="text-white uppercase text-[10px] tracking-wider font-semibold" style={{ backgroundColor: '#1e3a8a', color: '#ffffff' }}>
@@ -416,7 +427,7 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
           )}
 
           {/* Pricing Totals & Word Conversion */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start mb-8 relative z-10">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start mb-4 relative z-10">
             {/* Word Conversion (Left column) */}
             <div className="md:col-span-7 p-4 rounded-lg" style={{ backgroundColor: '#eff6ff', borderColor: '#dbeafe', borderWidth: '1px', borderStyle: 'solid' }}>
               <span className="text-[10px] font-bold uppercase tracking-widest block mb-1" style={{ color: '#1e3a8a' }}>
@@ -451,7 +462,7 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
           </div>
 
           {/* Terms, Conditions & Closing */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-10 border-t border-slate-100 pt-8 text-xs relative z-10" style={{ borderTop: '1px solid #f1f5f9' }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 border-t border-slate-100 pt-4 text-xs relative z-10" style={{ borderTop: '1px solid #f1f5f9' }}>
             {/* Left side: Terms of Offer */}
             {document.terms && (
               <div className="p-4 rounded" style={{ backgroundColor: '#f8fafc', borderColor: '#cbd5e1', borderWidth: '1px', borderStyle: 'solid' }}>
