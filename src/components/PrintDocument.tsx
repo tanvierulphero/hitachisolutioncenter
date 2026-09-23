@@ -118,13 +118,26 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
     const filename = `${document.docNumber}_${cleanCustomerName}.pdf`;
 
     const opt = {
-      margin: [10, 10, 10, 10] as [number, number, number, number], // mm
+      margin: 0, // Controlled exactly inside onclone sizing
       filename: filename,
       image: { type: 'jpeg' as const, quality: 0.98 },
       html2canvas: { 
         scale: 2, 
         useCORS: true, 
-        logging: false
+        logging: false,
+        onclone: (clonedDoc: any) => {
+          const printEl = clonedDoc.getElementById('printable-area');
+          if (printEl) {
+            printEl.style.width = '210mm';
+            printEl.style.height = '297mm';
+            printEl.style.padding = '12mm';
+            printEl.style.margin = '0';
+            printEl.style.boxShadow = 'none';
+            printEl.style.border = 'none';
+            printEl.style.boxSizing = 'border-box';
+            printEl.style.backgroundColor = '#ffffff';
+          }
+        }
       },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
     };
@@ -150,7 +163,7 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
   };
 
   return (
-    <div className="bg-slate-100 min-h-screen py-8 px-4 no-print flex flex-col items-center">
+    <div className="bg-slate-100 min-h-screen py-8 px-4 flex flex-col items-center">
       {/* Top action bar, hidden in print mode */}
       <div className="w-full max-w-4xl bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6 flex flex-wrap gap-3 items-center justify-between no-print">
         <div className="flex items-center gap-2">
