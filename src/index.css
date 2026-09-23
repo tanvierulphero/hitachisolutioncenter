@@ -10,8 +10,17 @@
     /* Force exact color/background rendering in print dialogs */
     html, body {
       background-color: #ffffff !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 210mm !important;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
+    }
+
+    /* Page setup for A4 with 0 margin so #printable-area precise padding handles page margins */
+    @page {
+      size: A4 portrait;
+      margin: 0 !important;
     }
 
     /* Hide everything outside printable container */
@@ -31,22 +40,18 @@
       position: absolute !important;
       left: 0 !important;
       top: 0 !important;
-      width: 100% !important;
-      height: 100% !important;
+      width: 210mm !important;
+      min-height: 297mm !important;
+      max-width: 210mm !important;
       box-sizing: border-box !important;
-      padding: 0 !important;
+      padding: 10mm 12mm !important;
       margin: 0 !important;
       box-shadow: none !important;
       border: none !important;
       background: white !important;
+      overflow: visible !important;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
-    }
-
-    /* Page setup for A4 with exactly 0.5in margins on all sides */
-    @page {
-      size: A4 portrait;
-      margin: 0.5in !important;
     }
 
     /* Prevent breaking inside tables and signature blocks */
