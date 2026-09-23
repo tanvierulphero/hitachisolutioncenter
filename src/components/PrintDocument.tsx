@@ -2,8 +2,6 @@ import { useState } from 'react';
 import { Document, BusinessSettings } from '../types';
 import { Mail, Phone, Globe, MapPin, Printer, Download, ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
 import Logo from './Logo';
-// @ts-ignore
-import html2pdf from 'html2pdf.js';
 
 interface PrintDocumentProps {
   document: Document;
@@ -99,113 +97,12 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
     }
   };
 
-  // Direct Browser Print Dialog Trigger with Isolated Frame Fallback
+  // Native high-fidelity print on the main window directly using exact A4 styles
   const handlePrint = () => {
-    const element = window.document.getElementById('printable-area');
-    if (!element) {
-      window.print();
-      return;
-    }
-
-    try {
-      // Remove any leftover print iframe if present
-      const existingIframe = window.document.getElementById('temp-print-frame');
-      if (existingIframe) {
-        existingIframe.remove();
-      }
-
-      // Create isolated invisible iframe for printing to avoid iframe sandbox/parent layout issues
-      const iframe = window.document.createElement('iframe');
-      iframe.id = 'temp-print-frame';
-      iframe.name = 'temp-print-frame';
-      iframe.style.position = 'fixed';
-      iframe.style.right = '0';
-      iframe.style.bottom = '0';
-      iframe.style.width = '0px';
-      iframe.style.height = '0px';
-      iframe.style.border = '0px';
-      window.document.body.appendChild(iframe);
-
-      const frameWindow = iframe.contentWindow;
-      const frameDoc = frameWindow?.document;
-      if (!frameDoc || !frameWindow) {
-        window.print();
-        return;
-      }
-
-      // Collect all current stylesheets and font links
-      let stylesHtml = '';
-      const styleNodes = Array.from(window.document.querySelectorAll('style, link[rel="stylesheet"]'));
-      styleNodes.forEach(node => {
-        stylesHtml += node.outerHTML;
-      });
-
-      frameDoc.open();
-      frameDoc.write(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>${getDocTitle()} - ${document.docNumber}</title>
-            ${stylesHtml}
-            <style>
-              @page {
-                size: A4 portrait;
-                margin: 0 !important;
-              }
-              body {
-                margin: 0 !important;
-                padding: 0 !important;
-                background: #ffffff !important;
-                color: #0f172a !important;
-                font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-              }
-              #printable-area {
-                width: 210mm !important;
-                height: 297mm !important;
-                box-sizing: border-box !important;
-                box-shadow: none !important;
-                border: none !important;
-                margin: 0 !important;
-                padding: 12mm !important;
-                min-height: 297mm !important;
-              }
-              .no-print {
-                display: none !important;
-              }
-            </style>
-          </head>
-          <body>
-            ${element.outerHTML}
-          </body>
-        </html>
-      `);
-      frameDoc.close();
-
-      // Give images and styles 300ms to settle in the frame before triggering print
-      setTimeout(() => {
-        try {
-          frameWindow.focus();
-          frameWindow.print();
-        } catch (err) {
-          console.warn('Iframe print failed, calling window.print()', err);
-          window.print();
-        } finally {
-          setTimeout(() => {
-            if (window.document.body.contains(iframe)) {
-              window.document.body.removeChild(iframe);
-            }
-          }, 3000);
-        }
-      }, 300);
-    } catch (e) {
-      console.warn('Isolated iframe creation failed, using window.print() fallback', e);
-      window.print();
-    }
+    window.print();
   };
 
-  // Download PDF file directly using html2pdf.js
+  // Download PDF file directly using CDN loaded html2pdf.js
   const handleSavePdf = async () => {
     setIsGeneratingPdf(true);
     setPdfSuccessNotice(false);
@@ -221,84 +118,29 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
     const filename = `${document.docNumber}_${cleanCustomerName}.pdf`;
 
     const opt = {
-      margin: [8, 8, 8, 8] as [number, number, number, number], // mm
+      margin: [10, 10, 10, 10] as [number, number, number, number], // mm
       filename: filename,
       image: { type: 'jpeg' as const, quality: 0.98 },
       html2canvas: { 
         scale: 2, 
         useCORS: true, 
-        logging: false,
-        onclone: (clonedDoc: any) => {
-          // 1. Sanitize all <style> tags to replace oklch/oklab syntax with standard RGB/Hex
-          const styleTags = clonedDoc.querySelectorAll('style');
-          styleTags.forEach((styleTag: any) => {
-            if (styleTag.textContent && (styleTag.textContent.includes('oklch') || styleTag.textContent.includes('oklab'))) {
-              styleTag.textContent = styleTag.textContent
-                .replace(/oklch\([^)]+\)/gi, '#1e3a8a')
-                .replace(/oklab\([^)]+\)/gi, '#1e3a8a');
-            }
-          });
-
-          // 2. Inject standard RGB/Hex overrides for all root CSS variables to prevent oklch parsing in html2canvas
-          const overrideStyle = clonedDoc.createElement('style');
-          overrideStyle.textContent = `
-            :root, * {
-              --color-blue-50: #eff6ff !important;
-              --color-blue-100: #dbeafe !important;
-              --color-blue-600: #2563eb !important;
-              --color-blue-700: #1d4ed8 !important;
-              --color-blue-800: #1e40af !important;
-              --color-blue-900: #1e3a8a !important;
-              --color-slate-50: #f8fafc !important;
-              --color-slate-100: #f1f5f9 !important;
-              --color-slate-200: #e2e8f0 !important;
-              --color-slate-300: #cbd5e1 !important;
-              --color-slate-400: #94a3b8 !important;
-              --color-slate-500: #64748b !important;
-              --color-slate-600: #475569 !important;
-              --color-slate-700: #334155 !important;
-              --color-slate-800: #1e293b !important;
-              --color-slate-900: #0f172a !important;
-            }
-          `;
-          clonedDoc.head.appendChild(overrideStyle);
-
-          // 3. Clean inline style attributes on all cloned elements
-          const printEl = clonedDoc.getElementById('printable-area');
-          if (printEl) {
-            const allNodes = printEl.querySelectorAll('*');
-            allNodes.forEach((node: any) => {
-              const el = node as HTMLElement;
-              if (el.style) {
-                const styleAttr = el.getAttribute('style') || '';
-                if (styleAttr.includes('oklch') || styleAttr.includes('oklab')) {
-                  el.setAttribute(
-                    'style',
-                    styleAttr
-                      .replace(/oklch\([^)]+\)/gi, '#1e3a8a')
-                      .replace(/oklab\([^)]+\)/gi, '#1e3a8a')
-                  );
-                }
-              }
-            });
-          }
-        }
+        logging: false
       },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
     };
 
     try {
-      // Resolve html2pdf function robustly under both CommonJS/ESM bundling wrap
-      const html2pdfFunc = (html2pdf as any).default || html2pdf;
-
+      // Access the globally loaded production html2pdf bundle
+      const html2pdfFunc = (window as any).html2pdf;
+      
       if (typeof html2pdfFunc === 'function') {
         await html2pdfFunc().set(opt).from(element).save();
+        setPdfSuccessNotice(true);
+        setTimeout(() => setPdfSuccessNotice(false), 4000);
       } else {
-        console.warn('html2pdf was not found as a function, falling back to window.print');
+        console.warn('html2pdf was not found on window, calling window.print()');
         window.print();
       }
-      setPdfSuccessNotice(true);
-      setTimeout(() => setPdfSuccessNotice(false), 4000);
     } catch (err) {
       console.error('PDF export error:', err);
       window.print();
