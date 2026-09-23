@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Document, BusinessSettings } from '../types';
 import { Mail, Phone, Globe, MapPin, Printer, Download, ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
 import Logo from './Logo';
-// @ts-ignore
-import html2pdf from 'html2pdf.js';
+import { toPng } from 'html-to-image';
+import jsPDF from 'jspdf';
 
 interface PrintDocumentProps {
   document: Document;
@@ -104,118 +104,53 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
     window.print();
   };
 
-  // Download PDF file directly using CDN or bundled html2pdf.js
+  // Download PDF file directly using browser native SVG engine (html-to-image) and jsPDF
   const handleSavePdf = async () => {
     if (isGeneratingPdf) return;
     setIsGeneratingPdf(true);
     setPdfSuccessNotice(false);
 
-    // Fail-safe timeout to guarantee isGeneratingPdf is reset no matter what happens
+    // Fail-safe timeout to guarantee button state is reset
     const safetyTimeout = setTimeout(() => {
       setIsGeneratingPdf(false);
-    }, 6000);
-
-    const element = window.document.getElementById('printable-area');
-    if (!element) {
-      setIsGeneratingPdf(false);
-      clearTimeout(safetyTimeout);
-      alert('Printable document area not found.');
-      return;
-    }
-
-    const cleanCustomerName = document.customerName ? document.customerName.replace(/[^a-zA-Z0-9]/g, '_') : 'Customer';
-    const filename = `${document.docNumber}_${cleanCustomerName}.pdf`;
-
-    const opt = {
-      margin: 0, // Controlled 100% exactly via padding inside onclone for pixel-perfect 1:1 scale
-      filename: filename,
-      image: { type: 'jpeg' as const, quality: 0.98 },
-      html2canvas: { 
-        scale: 2, 
-        useCORS: true, 
-        logging: false,
-        width: 794, // Standard 210mm A4 width in pixels at 96 DPI
-        windowWidth: 794, // Force desktop viewport layout rendering
-        onclone: (clonedDoc: any) => {
-          // 1. Setup exact dimensions matching standard A4 (210mm x 297mm) with exactly 0.5 in (12.7mm) padding margins
-          const printEl = clonedDoc.getElementById('printable-area');
-          if (printEl) {
-            printEl.style.width = '210mm';
-            printEl.style.height = '297mm';
-            printEl.style.padding = '12.7mm'; // Exactly 0.5 in padding margins
-            printEl.style.margin = '0';
-            printEl.style.boxShadow = 'none';
-            printEl.style.border = 'none';
-            printEl.style.boxSizing = 'border-box';
-            printEl.style.backgroundColor = '#ffffff';
-          }
-
-          // 2. Overwrite oklch/oklab CSS variables and styles ONLY in the cloned document to prevent html2canvas crashing
-          const styleTags = clonedDoc.querySelectorAll('style');
-          styleTags.forEach((styleTag: any) => {
-            if (styleTag.textContent) {
-              styleTag.textContent = styleTag.textContent
-                .replace(/oklch\([^)]+\)/gi, '#1e3a8a')
-                .replace(/oklab\([^)]+\)/gi, '#1e3a8a');
-            }
-          });
-
-          // 3. Remove letterSpacing styles from SVG text elements in cloned document
-          const svgTexts = clonedDoc.querySelectorAll('svg text');
-          svgTexts.forEach((textNode: any) => {
-            if (textNode.style) {
-              textNode.style.letterSpacing = '';
-            }
-          });
-
-          // 4. Inject explicit color variable fallbacks inside cloned document
-          const overrideStyle = clonedDoc.createElement('style');
-          overrideStyle.textContent = `
-            :root, * {
-              --color-blue-50: #eff6ff !important;
-              --color-blue-100: #dbeafe !important;
-              --color-blue-600: #2563eb !important;
-              --color-blue-700: #1d4ed8 !important;
-              --color-blue-800: #1e40af !important;
-              --color-blue-900: #1e3a8a !important;
-              --color-slate-50: #f8fafc !important;
-              --color-slate-100: #f1f5f9 !important;
-              --color-slate-200: #e2e8f0 !important;
-              --color-slate-300: #cbd5e1 !important;
-              --color-slate-400: #94a3b8 !important;
-              --color-slate-500: #64748b !important;
-              --color-slate-600: #475569 !important;
-              --color-slate-700: #334155 !important;
-              --color-slate-800: #1e293b !important;
-              --color-slate-900: #0f172a !important;
-            }
-          `;
-          clonedDoc.head.appendChild(overrideStyle);
-        }
-      },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
-    };
+    }, 8000);
 
     try {
-      // 1. Resolve robustly via direct ESM/CommonJS import
-      let html2pdfFunc = (html2pdf as any)?.default || html2pdf;
+      const element = window.document.getElementById('printable-area');
+      if (!element) {
+        setIsGeneratingPdf(false);
+        clearTimeout(safetyTimeout);
+        alert('Printable document area not found.');
+        return;
+      }
 
-      // 2. Fall back to globally loaded CDN version if needed
-      if (typeof html2pdfFunc !== 'function') {
-        html2pdfFunc = (window as any).html2pdf;
-      }
-      
-      if (typeof html2pdfFunc === 'function') {
-        await html2pdfFunc().set(opt).from(element).save();
-        setPdfSuccessNotice(true);
-        setTimeout(() => setPdfSuccessNotice(false), 4000);
-      } else {
-        console.warn('html2pdf was not found as a function');
-        alert('Could not download PDF directly. Please ensure your internet connection is active.');
-      }
+      const cleanCustomerName = document.customerName ? document.customerName.replace(/[^a-zA-Z0-9]/g, '_') : 'Customer';
+      const filename = `${document.docNumber}_${cleanCustomerName}.pdf`;
+
+      // Render the DOM node to a crisp high-resolution PNG using browser's native engine
+      const dataUrl = await toPng(element, {
+        quality: 0.98,
+        pixelRatio: 2,
+        backgroundColor: '#ffffff',
+        cacheBust: true,
+      });
+
+      // Construct A4 PDF document (210mm x 297mm)
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      // Fit PNG image perfectly onto A4 canvas
+      pdf.addImage(dataUrl, 'PNG', 0, 0, 210, 297);
+      pdf.save(filename);
+
+      setPdfSuccessNotice(true);
+      setTimeout(() => setPdfSuccessNotice(false), 4000);
     } catch (err) {
       console.error('PDF export error:', err);
-      alert('An error occurred while generating the PDF file.');
+      alert('An error occurred while generating the PDF file. Please try again.');
     } finally {
       clearTimeout(safetyTimeout);
       setIsGeneratingPdf(false);
