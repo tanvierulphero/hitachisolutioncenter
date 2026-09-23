@@ -120,7 +120,7 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
     const filename = `${document.docNumber}_${cleanCustomerName}.pdf`;
 
     const opt = {
-      margin: 0, // Controlled exactly inside onclone sizing
+      margin: [12.7, 12.7, 12.7, 12.7] as [number, number, number, number], // Exactly 0.5 inches in mm
       filename: filename,
       image: { type: 'jpeg' as const, quality: 0.98 },
       html2canvas: { 
@@ -128,12 +128,12 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
         useCORS: true, 
         logging: false,
         onclone: (clonedDoc: any) => {
-          // 1. Setup exact A4 page sizing on the cloned printable area
+          // 1. Setup exact dimensions matching 0.5 in margins on standard A4 (210 - 25.4 = 184.6mm wide; 297 - 25.4 = 271.6mm high)
           const printEl = clonedDoc.getElementById('printable-area');
           if (printEl) {
-            printEl.style.width = '210mm';
-            printEl.style.height = '297mm';
-            printEl.style.padding = '12mm';
+            printEl.style.width = '184.6mm';
+            printEl.style.height = '271.6mm';
+            printEl.style.padding = '0';
             printEl.style.margin = '0';
             printEl.style.boxShadow = 'none';
             printEl.style.border = 'none';

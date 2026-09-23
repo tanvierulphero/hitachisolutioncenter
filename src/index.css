@@ -31,10 +31,10 @@
       position: absolute !important;
       left: 0 !important;
       top: 0 !important;
-      width: 210mm !important;
-      height: 297mm !important;
+      width: 100% !important;
+      height: 100% !important;
       box-sizing: border-box !important;
-      padding: 12mm !important;
+      padding: 0 !important;
       margin: 0 !important;
       box-shadow: none !important;
       border: none !important;
@@ -43,10 +43,10 @@
       print-color-adjust: exact !important;
     }
 
-    /* Page setup for A4 */
+    /* Page setup for A4 with exactly 0.5in margins on all sides */
     @page {
       size: A4 portrait;
-      margin: 0 !important;
+      margin: 0.5in !important;
     }
 
     /* Prevent breaking inside tables and signature blocks */
