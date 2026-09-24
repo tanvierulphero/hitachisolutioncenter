@@ -28,7 +28,7 @@ jobs:
       - name: 📁 Prepare upload directory
         run: |
           mkdir -p deploy_dist
-          cp -r dist/* deploy_dist/
+          cp -r dist/. deploy_dist/
           if [ -d "api" ]; then
             cp -r api deploy_dist/
           fi
@@ -37,10 +37,10 @@ jobs:
           fi
 
       - name: 🚀 Sync files to cPanel Hosting via FTP
-        uses: SamKirland/FTP-Deploy-Action@v4.3.5
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
+          server: ${{ secrets.FTP_SERVER || 'ftp.localmarket247.top' }}
+          username: ${{ secrets.FTP_USERNAME || 'localmarket@localmarket247.top' }}
           password: ${{ secrets.FTP_PASSWORD }}
           server-dir: ${{ secrets.FTP_TARGET_DIR || '/public_html/' }}
           local-dir: ./deploy_dist/
