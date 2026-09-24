@@ -154,8 +154,9 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
       const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
 
       if (imgHeight <= pdfHeight) {
-        // Fits on single page perfectly without vertical stretching
-        pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, imgHeight);
+        // Fits on single page - position in the vertical middle of the page
+        const yOffset = (pdfHeight - imgHeight) / 2;
+        pdf.addImage(dataUrl, 'PNG', 0, Math.max(0, yOffset), pdfWidth, imgHeight);
       } else {
         // Multi-page document handling for lengthy item tables
         let heightLeft = imgHeight;
@@ -290,10 +291,10 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
 
             {/* Document Title Bar */}
             <div className="flex justify-between items-center bg-slate-100 px-3 py-2 rounded mb-3 border-l-4 border-[#1e3a8a]">
-              <span className="text-xs sm:text-sm font-bold text-blue-900 font-display uppercase tracking-wider">
+              <span className="text-sm sm:text-base font-bold text-blue-900 font-display uppercase tracking-wider">
                 {getDocTitle()}
               </span>
-              <div className="text-right text-[11px] sm:text-xs space-y-0.5">
+              <div className="text-right text-xs sm:text-sm space-y-0.5">
                 <div><span className="font-semibold text-slate-500">No:</span> <span className="font-bold text-slate-800">{document.docNumber}</span></div>
                 <div><span className="font-semibold text-slate-500">Date:</span> <span className="font-semibold text-slate-800">{document.date}</span></div>
                 {document.dueDate && (
@@ -303,42 +304,42 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
             </div>
 
             {/* Customer Metadata Block */}
-            <div className="grid grid-cols-2 gap-3 mb-3 text-xs leading-relaxed pb-3 border-b border-slate-300">
+            <div className="grid grid-cols-2 gap-3 mb-3 text-xs sm:text-sm leading-relaxed pb-3 border-b border-slate-300">
               <div>
-                <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Recipient / Client:</h3>
-                <p className="text-xs font-bold text-slate-900 font-display">{document.customerName}</p>
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Recipient / Client:</h3>
+                <p className="text-sm font-bold text-slate-900 font-display">{document.customerName}</p>
                 {document.customerCompany && (
-                  <p className="font-semibold text-slate-700 text-[11px]">{document.customerCompany}</p>
+                  <p className="font-semibold text-slate-700 text-xs sm:text-sm">{document.customerCompany}</p>
                 )}
-                <p className="text-slate-600 mt-0.5 flex items-center gap-1 text-[10px] sm:text-[11px]">
-                  <Phone className="w-3 h-3 text-slate-400 inline" /> {document.customerPhone}
+                <p className="text-slate-600 mt-0.5 flex items-center gap-1 text-xs sm:text-sm">
+                  <Phone className="w-3.5 h-3.5 text-slate-400 inline" /> {document.customerPhone}
                 </p>
                 {document.customerEmail && (
-                  <p className="text-slate-600 flex items-center gap-1 text-[10px] sm:text-[11px]">
-                    <Mail className="w-3 h-3 text-slate-400 inline" /> {document.customerEmail}
+                  <p className="text-slate-600 flex items-center gap-1 text-xs sm:text-sm">
+                    <Mail className="w-3.5 h-3.5 text-slate-400 inline" /> {document.customerEmail}
                   </p>
                 )}
               </div>
               
               <div className="text-right">
-                <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Address:</h3>
-                <p className="text-slate-700 whitespace-pre-line text-[10px] sm:text-[11px] leading-snug">{document.customerAddress}</p>
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Address:</h3>
+                <p className="text-slate-700 whitespace-pre-line text-xs sm:text-sm leading-snug">{document.customerAddress}</p>
               </div>
             </div>
 
             {/* Offer Letter / Quotation Paragraphs */}
             {(isOffer || isQuotation) && (
-              <div className="mb-3 space-y-1.5 text-xs leading-relaxed text-slate-700">
+              <div className="mb-3 space-y-1.5 text-xs sm:text-sm leading-relaxed text-slate-700">
                 {document.subject && (
-                  <p className="font-bold text-slate-900 border-b border-slate-200 pb-1 text-[11px]">
+                  <p className="font-bold text-slate-900 border-b border-slate-200 pb-1 text-xs sm:text-sm">
                     <span className="text-blue-900">Subject:</span> {document.subject}
                   </p>
                 )}
                 {document.salutation && (
-                  <p className="font-semibold text-slate-800 text-[11px]">{document.salutation}</p>
+                  <p className="font-semibold text-slate-800 text-xs sm:text-sm">{document.salutation}</p>
                 )}
                 {document.openingParagraph && (
-                  <p className="whitespace-pre-line text-[10px] sm:text-[11px]">{document.openingParagraph}</p>
+                  <p className="whitespace-pre-line text-xs sm:text-sm">{document.openingParagraph}</p>
                 )}
               </div>
             )}
@@ -346,19 +347,19 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
             {/* DOCUMENT ITEMS TABLE */}
             {document.items && document.items.length > 0 ? (
               <div className="w-full mb-3 relative z-10 overflow-hidden">
-                <table className="w-full text-left text-[10px] sm:text-[11px] border-collapse table-fixed">
+                <table className="w-full text-left text-xs sm:text-sm border-collapse table-fixed">
                   <thead>
-                    <tr className="text-white uppercase text-[8px] sm:text-[9px] tracking-wider font-bold bg-[#1e3a8a]">
-                      <th className="py-2 px-1 sm:px-2 text-center rounded-l w-[6%]">SL</th>
-                      <th className="py-2 px-2 text-left w-[34%]">Description of Goods / Spare Parts</th>
-                      <th className="py-2 px-1 sm:px-2 text-center w-[14%]">Brand</th>
-                      <th className="py-2 px-1 sm:px-2 text-center w-[8%]">Qty</th>
-                      <th className="py-2 px-1 sm:px-2 text-center w-[8%]">Unit</th>
-                      <th className="py-2 px-1.5 sm:px-2 text-right w-[15%]">Unit Price (BDT)</th>
-                      <th className="py-2 px-1.5 sm:px-2 text-right rounded-r w-[15%]">Total Amount (BDT)</th>
+                    <tr className="text-white uppercase text-xs tracking-wider font-bold bg-[#1e3a8a]">
+                      <th className="py-2.5 px-1 sm:px-2 text-center rounded-l w-[6%]">SL</th>
+                      <th className="py-2.5 px-2 text-left w-[34%]">Description of Goods / Spare Parts</th>
+                      <th className="py-2.5 px-1 sm:px-2 text-center w-[14%]">Brand</th>
+                      <th className="py-2.5 px-1 sm:px-2 text-center w-[8%]">Qty</th>
+                      <th className="py-2.5 px-1 sm:px-2 text-center w-[8%]">Unit</th>
+                      <th className="py-2.5 px-1.5 sm:px-2 text-right w-[15%]">Unit Price (BDT)</th>
+                      <th className="py-2.5 px-1.5 sm:px-2 text-right rounded-r w-[15%]">Total Amount (BDT)</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200">
+                  <tbody className="divide-y divide-slate-200 text-xs sm:text-sm">
                     {document.items.map((item, index) => (
                       <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                         <td className="py-2 px-1 sm:px-2 text-center font-medium text-slate-500">{index + 1}</td>
@@ -366,7 +367,7 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
                           {item.name}
                         </td>
                         <td className="py-2 px-1 sm:px-2 text-center">
-                          <span className="inline-block bg-slate-100 text-slate-700 font-bold px-1 py-0.5 rounded text-[8px] sm:text-[9px] truncate max-w-full">
+                          <span className="inline-block bg-slate-100 text-slate-700 font-bold px-1.5 py-0.5 rounded text-xs truncate max-w-full">
                             {item.brand}
                           </span>
                         </td>
@@ -380,7 +381,7 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
                 </table>
               </div>
             ) : (
-              <div className="text-center py-6 text-slate-400 text-xs italic bg-slate-50 rounded border border-dashed border-slate-200 mb-4">
+              <div className="text-center py-6 text-slate-400 text-xs sm:text-sm italic bg-slate-50 rounded border border-dashed border-slate-200 mb-4">
                 No items listed in this document.
               </div>
             )}
