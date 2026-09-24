@@ -238,8 +238,9 @@ export default function App() {
     setProducts(list);
     try {
       await apiSaveProduct(p);
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to save product:', e);
+      alert('⚠️ MySQL Database Error: ' + (e.message || 'Could not save product to database. Please check MySQL database credentials in api/config.php.'));
     }
   };
 
@@ -248,8 +249,9 @@ export default function App() {
     setProducts(list);
     try {
       await apiSaveProduct(p);
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to update product:', e);
+      alert('⚠️ MySQL Database Error: ' + (e.message || 'Could not update product.'));
     }
   };
 
@@ -258,8 +260,9 @@ export default function App() {
     setProducts(list);
     try {
       await apiDeleteProduct(id);
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to delete product:', e);
+      alert('⚠️ MySQL Database Error: ' + (e.message || 'Could not delete product.'));
     }
   };
 
@@ -269,8 +272,9 @@ export default function App() {
     setCustomers(list);
     try {
       await apiSaveCustomer(c);
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to save customer:', e);
+      alert('⚠️ MySQL Database Error: ' + (e.message || 'Could not save customer to database.'));
     }
   };
 
@@ -287,8 +291,9 @@ export default function App() {
 
     try {
       await apiSaveDocument(doc);
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to save document:', e);
+      alert('⚠️ MySQL Database Error: ' + (e.message || 'Could not save document to MySQL database. Please verify api/config.php database settings.'));
     }
     
     // Decrement stock levels if a paid sales invoice is created

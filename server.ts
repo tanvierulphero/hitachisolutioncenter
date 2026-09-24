@@ -1,5 +1,8 @@
 import express from 'express';
 import http from 'http';
+import fs from 'fs';
+import path from 'path';
+import multer from 'multer';
 import { Server as SocketIOServer } from 'socket.io';
 import { db } from './src/db/index.ts';
 import { products, customers, documents, staffUsers, settings } from './src/db/schema.ts';
@@ -16,7 +19,42 @@ const io = new SocketIOServer(httpServer, {
   },
 });
 
+// Configure upload storage
+const uploadsDir = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.jpg';
+    const newName = `prod_${Date.now()}_${Math.random().toString(36).substring(2, 8)}${ext}`;
+    cb(null, newName);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+});
+
+app.use('/uploads', express.static(uploadsDir));
 app.use(express.json({ limit: '10mb' }));
+
+// Upload image handler for Node server
+const handleUpload = (req: express.Request, res: express.Response) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No image file uploaded' });
+  }
+  const fileUrl = `/uploads/${req.file.filename}`;
+  res.json({ url: fileUrl, success: true });
+};
+
+app.post('/api/upload', upload.single('file'), handleUpload);
+app.post('/api/upload.php', upload.single('file'), handleUpload);
 
 // Helper to broadcast changes instantly
 function notifyChange(entity: string, action: string, data?: any) {

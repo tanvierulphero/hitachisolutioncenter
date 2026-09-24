@@ -1,16 +1,51 @@
 import { Product, Customer, Document, StaffUser, BusinessSettings } from '../types';
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(url, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-    ...options,
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+      ...options,
+    });
+  } catch (err: any) {
+    throw new Error(`Network Error: ${err.message || 'Server unreachable'}`);
+  }
+
+  // If 404, attempt direct PHP endpoint fallback e.g. /api/index.php?endpoint=products
+  if (response.status === 404 && url.startsWith('/api/') && !url.startsWith('/api/index.php')) {
+    const rawPath = url.replace(/^\/api\//, '');
+    const parts = rawPath.split('/').filter(Boolean);
+    const endpoint = parts[0] || '';
+    const id = parts[1] || '';
+    const fallbackUrl = `/api/index.php?endpoint=${encodeURIComponent(endpoint)}${id ? `&id=${encodeURIComponent(id)}` : ''}`;
+
+    try {
+      const fallbackResponse = await fetch(fallbackUrl, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...options?.headers,
+        },
+        ...options,
+      });
+
+      if (fallbackResponse.ok) {
+        return fallbackResponse.json();
+      }
+    } catch {
+      // Ignore fallback network error and throw clear error below
+    }
+  }
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ error: response.statusText }));
+    
+    if (response.status === 404) {
+      throw new Error(`HTTP 404 Not Found: 'api' folder or '.htaccess' is missing in cPanel public_html. Please upload the full contents of your 'dist' folder to public_html.`);
+    }
+
     throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
   }
 
@@ -64,3 +99,47 @@ export const apiSaveSettings = (settings: BusinessSettings): Promise<BusinessSet
     method: 'POST',
     body: JSON.stringify(settings),
   });
+
+// Image Upload API
+export async function apiUploadImage(file: File): Promise<{ url: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  let response: Response;
+  try {
+    response = await fetch('/api/upload.php', {
+      method: 'POST',
+      body: formData,
+    });
+  } catch {
+    try {
+      response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+    } catch (err: any) {
+      throw new Error(`Upload Failed: ${err.message || 'Server unreachable'}`);
+    }
+  }
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      try {
+        const fallbackRes = await fetch('/api/index.php?endpoint=upload', {
+          method: 'POST',
+          body: formData,
+        });
+        if (fallbackRes.ok) {
+          return fallbackRes.json();
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    const err = await response.json().catch(() => ({ error: 'Image upload failed' }));
+    throw new Error(err.error || 'Image upload failed');
+  }
+
+  return response.json();
+}

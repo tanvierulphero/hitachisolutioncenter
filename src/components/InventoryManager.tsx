@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Product, ProductSpec } from '../types';
-import { Search, Plus, Trash2, Edit3, Save, RotateCcw, AlertTriangle, ChevronsUpDown, Eye } from 'lucide-react';
+import { Search, Plus, Trash2, Edit3, Save, RotateCcw, AlertTriangle, ChevronsUpDown, Eye, Upload, Loader2, Image as ImageIcon } from 'lucide-react';
+import { apiUploadImage } from '../lib/api';
 
 interface InventoryManagerProps {
   products: Product[];
@@ -21,6 +22,22 @@ export default function InventoryManager({
   // Modal / Form States
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const res = await apiUploadImage(file);
+      setFormData(prev => ({ ...prev, imageUrl: res.url }));
+    } catch (err: any) {
+      alert('Image upload failed: ' + (err.message || 'Could not upload file to server'));
+    } finally {
+      setIsUploading(false);
+    }
+  };
   
   const [formData, setFormData] = useState<{
     name: string;
@@ -481,16 +498,48 @@ export default function InventoryManager({
                 </div>
               </div>
 
-              {/* Image URL Placeholder */}
-              <div className="space-y-1.5">
-                <label className="font-bold text-slate-700">Display Image URL Placeholder</label>
-                <input
-                  type="text"
-                  placeholder="Image link..."
-                  value={formData.imageUrl}
-                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:bg-white focus:outline-hidden"
-                />
+              {/* Product Image Upload & Server Link */}
+              <div className="space-y-2 border-t border-slate-100 pt-3">
+                <label className="font-bold text-slate-700 block">Product Image (cPanel Server Upload or URL)</label>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  {formData.imageUrl && (
+                    <div className="w-16 h-16 rounded-lg border border-slate-200 overflow-hidden bg-slate-100 flex-shrink-0 relative">
+                      <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <label className={`px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-lg font-bold text-xs cursor-pointer flex items-center gap-2 transition-colors ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                        {isUploading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin text-blue-700" />
+                            <span>Uploading to cPanel...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-4 h-4" />
+                            <span>Upload Image File</span>
+                          </>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          disabled={isUploading}
+                          onChange={handleFileUpload}
+                          className="hidden"
+                        />
+                      </label>
+                      <span className="text-[11px] text-slate-400 font-medium">Or type image URL</span>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="e.g. /uploads/prod_123.jpg or https://..."
+                      value={formData.imageUrl}
+                      onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:bg-white focus:outline-hidden text-xs font-mono"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="border-t border-slate-100 pt-4 flex justify-end gap-3.5">
