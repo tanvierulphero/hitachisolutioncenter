@@ -1,7 +1,7 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/YOUR_CPANEL_USERNAME/public_html
-    - /bin/cp -R dist/* $DEPLOYPATH/
-    - /bin/cp -R api $DEPLOYPATH/
-    - /bin/cp .htaccess $DEPLOYPATH/
+    - export DEPLOYPATH=$HOME/localmarket247.top
+    - /bin/cp -R dist/* $DEPLOYPATH/ 2>/dev/null || /bin/cp -R dist/* $HOME/public_html/
+    - /bin/cp -R api $DEPLOYPATH/ 2>/dev/null || /bin/cp -R api $HOME/public_html/
+    - /bin/cp .htaccess $DEPLOYPATH/ 2>/dev/null || /bin/cp .htaccess $HOME/public_html/

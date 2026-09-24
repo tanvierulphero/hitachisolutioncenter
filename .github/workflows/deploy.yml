@@ -42,6 +42,6 @@ jobs:
           server: ${{ secrets.FTP_SERVER || 'ftp.localmarket247.top' }}
           username: ${{ secrets.FTP_USERNAME || 'localmarket@localmarket247.top' }}
           password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: ${{ secrets.FTP_TARGET_DIR || './' }}
+          server-dir: ${{ secrets.FTP_TARGET_DIR || '/' }}
           local-dir: ./deploy_dist/
           state-name: .ftp-deploy-sync-state.json
