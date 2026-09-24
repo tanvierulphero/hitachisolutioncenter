@@ -73,10 +73,10 @@ export default function AdminLogin({ staffUsers, onLoginSuccess, onBackToCatalog
     setError('Invalid passcode. Please enter a valid Admin or Staff passcode.');
   };
 
-  // Quick fill helper for testing
+  // Quick select sub-account (leaves passcode empty for user to type manually)
   const handleQuickSelect = (staff: StaffUser) => {
     setSelectedStaffId(staff.id);
-    setPasscode(staff.passcode);
+    setPasscode('');
     setError('');
   };
 
@@ -136,7 +136,7 @@ export default function AdminLogin({ staffUsers, onLoginSuccess, onBackToCatalog
                     }`}>
                       {staff.role}
                     </span>
-                    <span className="text-[9px] font-mono opacity-80">{staff.passcode}</span>
+                    <span className="text-[9px] text-slate-400 font-medium">Click to select</span>
                   </div>
                 </button>
               ))}
@@ -145,13 +145,13 @@ export default function AdminLogin({ staffUsers, onLoginSuccess, onBackToCatalog
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+        <form onSubmit={handleSubmit} className="space-y-4 text-xs" autoComplete="off">
           {/* Sub-Account Selector Dropdown */}
           <div className="space-y-1.5">
             <label className="font-bold text-slate-700 block">Select Sub-Account (Optional)</label>
             <select
               value={selectedStaffId}
-              onChange={(e) => { setSelectedStaffId(e.target.value); setError(''); }}
+              onChange={(e) => { setSelectedStaffId(e.target.value); setPasscode(''); setError(''); }}
               className="w-full bg-slate-50 border border-slate-200 focus:bg-white rounded-xl p-3 text-slate-900 font-semibold"
             >
               <option value="">&mdash; Any Active Account / Master Admin &mdash;</option>
@@ -171,7 +171,8 @@ export default function AdminLogin({ staffUsers, onLoginSuccess, onBackToCatalog
                 type={showPasscode ? 'text' : 'password'}
                 value={passcode}
                 onChange={(e) => { setPasscode(e.target.value); setError(''); }}
-                placeholder="Enter passcode (e.g. admin123, mgr123, sales123)"
+                placeholder="Enter passcode"
+                autoComplete="new-password"
                 className="w-full pl-3.5 pr-10 py-3 bg-slate-50 border border-slate-200 focus:bg-white focus:outline-hidden focus:border-blue-900 rounded-xl text-slate-900 font-mono font-bold tracking-wide transition-all"
                 required
               />
@@ -185,11 +186,11 @@ export default function AdminLogin({ staffUsers, onLoginSuccess, onBackToCatalog
             </div>
           </div>
 
-          {/* Hint info */}
+          {/* Security Note */}
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-[11px] text-slate-500 leading-normal flex gap-2">
             <ShieldCheck className="w-4 h-4 text-blue-800 flex-shrink-0 mt-0.5" />
             <span>
-              Passcodes: Master Admin (<b>admin123</b>), Manager (<b>mgr123</b>), Sales (<b>sales123</b>), Store Staff (<b>staff123</b>).
+              Please enter your assigned account passcode manually to verify identity and open workspace.
             </span>
           </div>
 
