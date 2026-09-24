@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { io } from 'socket.io-client';
 import { Product, Customer, Document, BusinessSettings, DocumentType, StaffUser, PermissionKey } from './types';
 import { 
   DEFAULT_SETTINGS, 
@@ -33,7 +34,8 @@ import {
   Trash2,
   RotateCcw,
   Database,
-  FolderLock
+  FolderLock,
+  Zap
 } from 'lucide-react';
 import { 
   apiGetProducts,
@@ -119,6 +121,28 @@ export default function App() {
 
   useEffect(() => {
     loadCloudSqlData();
+
+    // Establish Real-Time Socket Connection
+    const socket = io();
+
+    socket.on('db_change', (change) => {
+      console.log('Real-Time SQL Change Notification Received:', change);
+      if (change.entity === 'products') {
+        apiGetProducts().then(setProducts).catch(() => {});
+      } else if (change.entity === 'customers') {
+        apiGetCustomers().then(setCustomers).catch(() => {});
+      } else if (change.entity === 'documents') {
+        apiGetDocuments().then(setDocuments).catch(() => {});
+      } else if (change.entity === 'staff') {
+        apiGetStaff().then(setStaffUsers).catch(() => {});
+      } else if (change.entity === 'settings') {
+        apiGetSettings().then(s => { setSettings(s); setSettingsForm(s); }).catch(() => {});
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
   // Staff Account Handlers
@@ -535,13 +559,14 @@ export default function App() {
               </div>
 
               {/* Right Side Header Items */}
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
                 <span className="hidden lg:inline text-xs italic text-blue-900 font-medium font-sans">
                   "Your Problem Solution is Sustainable Partner"
                 </span>
-                <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-[10px] font-black uppercase tracking-wider">
-                  <Database className="w-3 h-3 text-blue-600" />
-                  Cloud SQL MySQL / Postgres Active
+                <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-[10px] font-black uppercase tracking-wider shadow-2xs">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <Zap className="w-3 h-3 text-emerald-600 fill-emerald-600" />
+                  Real-Time SQL Live Sync Active
                 </div>
               </div>
             </header>

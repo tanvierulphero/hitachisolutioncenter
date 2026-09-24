@@ -1,4 +1,6 @@
 import express from 'express';
+import http from 'http';
+import { Server as SocketIOServer } from 'socket.io';
 import { db } from './src/db/index.ts';
 import { products, customers, documents, staffUsers, settings } from './src/db/schema.ts';
 import { eq } from 'drizzle-orm';
@@ -7,7 +9,23 @@ import { INITIAL_PRODUCTS, INITIAL_CUSTOMERS, INITIAL_DOCUMENTS, INITIAL_STAFF_U
 const app = express();
 const port = 3000;
 
+const httpServer = http.createServer(app);
+const io = new SocketIOServer(httpServer, {
+  cors: {
+    origin: '*',
+  },
+});
+
 app.use(express.json({ limit: '10mb' }));
+
+// Helper to broadcast changes instantly
+function notifyChange(entity: string, action: string, data?: any) {
+  io.emit('db_change', { entity, action, data, timestamp: Date.now() });
+}
+
+io.on('connection', (socket) => {
+  console.log('Real-time SQL client connected:', socket.id);
+});
 
 // Seed initial data if tables are empty
 async function seedInitialDataIfNeeded() {
@@ -91,6 +109,7 @@ app.post('/api/products', async (req, res) => {
         imageUrl: item.imageUrl || '',
       },
     });
+    notifyChange('products', 'save', item);
     res.json(item);
   } catch (err: any) {
     console.error('Failed to save product:', err);
@@ -102,6 +121,7 @@ app.delete('/api/products/:id', async (req, res) => {
   try {
     const { id } = req.params;
     await db.delete(products).where(eq(products.id, id));
+    notifyChange('products', 'delete', { id });
     res.json({ success: true });
   } catch (err: any) {
     console.error('Failed to delete product:', err);
@@ -137,6 +157,7 @@ app.post('/api/customers', async (req, res) => {
         address: item.address || '',
       },
     });
+    notifyChange('customers', 'save', item);
     res.json(item);
   } catch (err: any) {
     console.error('Failed to save customer:', err);
@@ -148,6 +169,7 @@ app.delete('/api/customers/:id', async (req, res) => {
   try {
     const { id } = req.params;
     await db.delete(customers).where(eq(customers.id, id));
+    notifyChange('customers', 'delete', { id });
     res.json({ success: true });
   } catch (err: any) {
     console.error('Failed to delete customer:', err);
@@ -205,6 +227,7 @@ app.post('/api/documents', async (req, res) => {
         signatureName: item.signatureName || 'Hitachi Air Solution Center',
       },
     });
+    notifyChange('documents', 'save', item);
     res.json(item);
   } catch (err: any) {
     console.error('Failed to save document:', err);
@@ -216,6 +239,7 @@ app.delete('/api/documents/:id', async (req, res) => {
   try {
     const { id } = req.params;
     await db.delete(documents).where(eq(documents.id, id));
+    notifyChange('documents', 'delete', { id });
     res.json({ success: true });
   } catch (err: any) {
     console.error('Failed to delete document:', err);
@@ -255,6 +279,7 @@ app.post('/api/staff', async (req, res) => {
         createdAt: item.createdAt || new Date().toISOString().split('T')[0],
       },
     });
+    notifyChange('staff', 'save', item);
     res.json(item);
   } catch (err: any) {
     console.error('Failed to save staff:', err);
@@ -266,6 +291,7 @@ app.delete('/api/staff/:id', async (req, res) => {
   try {
     const { id } = req.params;
     await db.delete(staffUsers).where(eq(staffUsers.id, id));
+    notifyChange('staff', 'delete', { id });
     res.json({ success: true });
   } catch (err: any) {
     console.error('Failed to delete staff user:', err);
@@ -315,6 +341,7 @@ app.post('/api/settings', async (req, res) => {
         signatureLabel: item.signatureLabel || '',
       },
     });
+    notifyChange('settings', 'save', item);
     res.json(item);
   } catch (err: any) {
     console.error('Failed to save settings:', err);
@@ -337,6 +364,7 @@ if (process.env.NODE_ENV !== 'production') {
   });
 }
 
-app.listen(port, '0.0.0.0', () => {
-  console.log(`Server listening on http://0.0.0.0:${port}`);
+httpServer.listen(port, '0.0.0.0', () => {
+  console.log(`Server with Real-Time WebSockets listening on http://0.0.0.0:${port}`);
 });
+
