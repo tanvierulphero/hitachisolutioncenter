@@ -113,7 +113,7 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
     // Fail-safe timeout to guarantee button state is reset
     const safetyTimeout = setTimeout(() => {
       setIsGeneratingPdf(false);
-    }, 8000);
+    }, 10000);
 
     try {
       const element = window.document.getElementById('printable-area');
@@ -127,12 +127,17 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
       const cleanCustomerName = document.customerName ? document.customerName.replace(/[^a-zA-Z0-9]/g, '_') : 'Customer';
       const filename = `${document.docNumber}_${cleanCustomerName}.pdf`;
 
-      // Render the DOM node to a crisp high-resolution PNG using browser's native engine
+      // Render the DOM node to a crisp high-resolution PNG with fixed 2x scale
       const dataUrl = await toPng(element, {
-        quality: 0.98,
+        quality: 1.0,
         pixelRatio: 2,
         backgroundColor: '#ffffff',
         cacheBust: true,
+        style: {
+          transform: 'scale(1)',
+          borderRadius: '0px',
+          boxShadow: 'none',
+        }
       });
 
       // Construct A4 PDF document (210mm x 297mm)
@@ -140,10 +145,33 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4',
+        compress: true,
       });
 
-      // Fit PNG image perfectly onto A4 canvas
-      pdf.addImage(dataUrl, 'PNG', 0, 0, 210, 297);
+      const imgProps = pdf.getImageProperties(dataUrl);
+      const pdfWidth = 210;
+      const pdfHeight = 297;
+      const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      if (imgHeight <= pdfHeight) {
+        // Fits on single page perfectly without vertical stretching
+        pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, imgHeight);
+      } else {
+        // Multi-page document handling for lengthy item tables
+        let heightLeft = imgHeight;
+        let position = 0;
+
+        pdf.addImage(dataUrl, 'PNG', 0, position, pdfWidth, imgHeight);
+        heightLeft -= pdfHeight;
+
+        while (heightLeft > 2) {
+          position = position - pdfHeight;
+          pdf.addPage();
+          pdf.addImage(dataUrl, 'PNG', 0, position, pdfWidth, imgHeight);
+          heightLeft -= pdfHeight;
+        }
+      }
+
       pdf.save(filename);
 
       setPdfSuccessNotice(true);
