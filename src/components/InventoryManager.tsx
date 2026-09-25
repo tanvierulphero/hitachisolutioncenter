@@ -100,6 +100,10 @@ export default function InventoryManager({
   const productAnalytics = useMemo(() => {
     if (!historyProduct) return null;
 
+    const hpId = historyProduct.id || '';
+    const hpSku = (historyProduct.sku || '').toLowerCase();
+    const hpName = (historyProduct.name || '').toLowerCase();
+
     // 1. Find all Sales Invoices / Documents containing this product
     const salesRecords: {
       docId: string;
@@ -130,40 +134,46 @@ export default function InventoryManager({
       doc: Document;
     }[] = [];
 
-    documents.forEach(doc => {
+    (documents || []).forEach(doc => {
+      if (!doc || !Array.isArray(doc.items)) return;
+
       doc.items.forEach(it => {
+        if (!it) return;
+        const itProdId = it.productId || '';
+        const itName = (it.name || '').toLowerCase();
+
         // Match by productId or SKU/name
-        const isMatch = (it.productId && it.productId === historyProduct.id) ||
-                        (it.name && historyProduct.sku && it.name.toLowerCase().includes(historyProduct.sku.toLowerCase())) ||
-                        (it.name && historyProduct.name && it.name.toLowerCase().includes(historyProduct.name.toLowerCase()));
+        const isMatch = (itProdId && itProdId === hpId) ||
+                        (itName && hpSku && itName.includes(hpSku)) ||
+                        (itName && hpName && itName.includes(hpName));
 
         if (isMatch) {
           if (doc.type === 'INVOICE' || doc.type === 'QUOTATION' || doc.type === 'OFFER_LETTER') {
             salesRecords.push({
-              docId: doc.id,
-              docNumber: doc.docNumber,
-              docType: doc.type,
-              date: doc.date,
-              customerId: doc.customerId,
-              customerName: doc.customerName,
-              customerCompany: doc.customerCompany || doc.customerName,
-              customerPhone: doc.customerPhone,
-              quantity: it.quantity,
-              unitPrice: it.price,
-              lineTotal: it.total,
+              docId: doc.id || '',
+              docNumber: doc.docNumber || 'DOC-000',
+              docType: doc.type || 'INVOICE',
+              date: doc.date || '',
+              customerId: doc.customerId || '',
+              customerName: doc.customerName || 'Customer',
+              customerCompany: doc.customerCompany || doc.customerName || 'Client Company',
+              customerPhone: doc.customerPhone || '',
+              quantity: Number(it.quantity) || 1,
+              unitPrice: Number(it.price) || 0,
+              lineTotal: Number(it.total) || 0,
               unit: it.unit || historyProduct.unit || 'Pcs',
-              status: doc.status,
+              status: doc.status || 'Active',
               doc
             });
           } else if (doc.type === 'BILL') {
             purchaseRecords.push({
-              docId: doc.id,
-              docNumber: doc.docNumber,
-              date: doc.date,
+              docId: doc.id || '',
+              docNumber: doc.docNumber || 'BILL-000',
+              date: doc.date || '',
               supplierName: doc.customerCompany || doc.customerName || 'Vendor Supplier',
-              quantity: it.quantity,
-              buyPrice: it.price,
-              lineTotal: it.total,
+              quantity: Number(it.quantity) || 1,
+              buyPrice: Number(it.price) || 0,
+              lineTotal: Number(it.total) || 0,
               doc
             });
           }
@@ -172,21 +182,26 @@ export default function InventoryManager({
     });
 
     // 3. Find field dispatches containing this product
-    const dispatchRecords = dispatches.filter(d => 
-      d.items.some(it => 
-        (it.productId && it.productId === historyProduct.id) || 
-        (it.productName && historyProduct.name && it.productName.toLowerCase().includes(historyProduct.name.toLowerCase()))
-      )
+    const dispatchRecords = (dispatches || []).filter(d => 
+      d && Array.isArray(d.items) && d.items.some(it => {
+        if (!it) return false;
+        const itProdId = it.productId || '';
+        const itProdName = (it.productName || '').toLowerCase();
+        return (itProdId && itProdId === hpId) || (itProdName && hpName && itProdName.includes(hpName));
+      })
     );
 
     // Sum total quantities & financial revenue
     const invoiceSales = salesRecords.filter(r => r.docType === 'INVOICE');
-    const totalQtySold = invoiceSales.reduce((s, r) => s + r.quantity, 0);
-    const totalSalesRevenue = invoiceSales.reduce((s, r) => s + r.lineTotal, 0);
+    const totalQtySold = invoiceSales.reduce((s, r) => s + (Number(r.quantity) || 0), 0);
+    const totalSalesRevenue = invoiceSales.reduce((s, r) => s + (Number(r.lineTotal) || 0), 0);
 
-    const totalQtyPurchased = purchaseRecords.reduce((s, r) => s + r.quantity, 0) + historyProduct.stock + totalQtySold;
-    const totalPurchaseCostEstimate = totalQtySold * (historyProduct.price * 0.70); // Estimated 30% margin cost if bill price missing
-    const totalPurchaseCostActual = purchaseRecords.reduce((s, r) => s + r.lineTotal, 0) || totalPurchaseCostEstimate;
+    const currentStock = Number(historyProduct.stock) || 0;
+    const currentPrice = Number(historyProduct.price) || 0;
+
+    const totalQtyPurchased = purchaseRecords.reduce((s, r) => s + (Number(r.quantity) || 0), 0) + currentStock + totalQtySold;
+    const totalPurchaseCostEstimate = totalQtySold * (currentPrice * 0.70); // Estimated 30% margin cost if bill price missing
+    const totalPurchaseCostActual = purchaseRecords.reduce((s, r) => s + (Number(r.lineTotal) || 0), 0) || totalPurchaseCostEstimate;
 
     // Profit or Loss
     const netProfitLoss = totalSalesRevenue - totalPurchaseCostActual;
@@ -200,7 +215,7 @@ export default function InventoryManager({
       dispatchRecords,
       totalQtyPurchased,
       totalQtySold,
-      availableStock: historyProduct.stock,
+      availableStock: currentStock,
       totalSalesRevenue,
       totalPurchaseCostActual,
       netProfitLoss,
@@ -208,14 +223,21 @@ export default function InventoryManager({
       isProfit: netProfitLoss >= 0
     };
   }, [historyProduct, documents, dispatches]);
+
+  const categories = ['Screw Air Compressor', 'Air Dryer', 'Line Filter', 'Spare Parts'];
   const brands = ['Hitachi', 'Atlas Copco', 'KAESER', 'BOGE', 'ELGi', 'Linghein', 'JAGUAR', 'IR Ingersoll Rand', 'Gardner Denver'];
 
-  // Filtering products
+  // Filtering products (defensive)
   const filteredProducts = useMemo(() => {
+    if (!Array.isArray(products)) return [];
     return products.filter(p => {
-      const matchSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          p.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          p.brand.toLowerCase().includes(searchQuery.toLowerCase());
+      if (!p) return false;
+      const pName = (p.name || '').toLowerCase();
+      const pSku = (p.sku || '').toLowerCase();
+      const pBrand = (p.brand || '').toLowerCase();
+      const query = (searchQuery || '').toLowerCase();
+
+      const matchSearch = pName.includes(query) || pSku.includes(query) || pBrand.includes(query);
       const matchCat = selectedCategory === 'All' || p.category === selectedCategory;
       return matchSearch && matchCat;
     });
@@ -366,32 +388,37 @@ export default function InventoryManager({
             <tbody className="divide-y divide-slate-100 font-sans">
               {filteredProducts.length > 0 ? (
                 filteredProducts.map(product => {
-                  const isLowStock = product.stock < 5;
+                  if (!product) return null;
+                  const prodStock = Number(product.stock) || 0;
+                  const prodPrice = Number(product.price) || 0;
+                  const prodUnit = product.unit || 'Pcs';
+                  const isLowStock = prodStock < 5;
+
                   return (
-                    <tr key={product.id} className="hover:bg-slate-50/50 transition-colors">
+                    <tr key={product.id || Math.random()} className="hover:bg-slate-50/50 transition-colors">
                       {/* Name & SKU */}
                       <td className="py-3.5 px-4 max-w-sm">
                         <div className="space-y-0.5">
-                          <span className="font-bold text-slate-900 block leading-tight">{product.name}</span>
-                          <span className="text-[10px] font-bold text-slate-500 uppercase font-mono">{product.sku}</span>
+                          <span className="font-bold text-slate-900 block leading-tight">{product.name || 'Unnamed Product'}</span>
+                          <span className="text-[10px] font-bold text-slate-500 uppercase font-mono">{product.sku || 'N/A'}</span>
                         </div>
                       </td>
 
                       {/* Category */}
                       <td className="py-3.5 px-3">
-                        <span className="text-slate-600 font-semibold">{product.category}</span>
+                        <span className="text-slate-600 font-semibold">{product.category || 'General'}</span>
                       </td>
 
                       {/* Brand */}
                       <td className="py-3.5 px-3">
                         <span className="inline-block bg-slate-100 text-slate-700 font-bold px-2 py-0.5 rounded text-[10px]">
-                          {product.brand}
+                          {product.brand || 'Hitachi'}
                         </span>
                       </td>
 
                       {/* Price */}
                       <td className="py-3.5 px-3 text-right font-extrabold text-slate-900 font-display">
-                        ৳{product.price.toLocaleString()} / {product.unit}
+                        ৳{prodPrice.toLocaleString()} / {prodUnit}
                       </td>
 
                       {/* Stock with adjustment controls */}
@@ -408,7 +435,7 @@ export default function InventoryManager({
                           
                           {/* Stock display */}
                           <span className={`w-10 text-center font-extrabold text-sm ${isLowStock ? 'text-rose-600 font-display' : 'text-slate-900'}`}>
-                            {product.stock}
+                            {prodStock}
                           </span>
 
                           {/* Increment */}
@@ -424,7 +451,7 @@ export default function InventoryManager({
 
                       {/* Stock Status badges */}
                       <td className="py-3.5 px-3 text-center">
-                        {product.stock === 0 ? (
+                        {prodStock === 0 ? (
                           <span className="inline-block bg-rose-50 text-rose-700 border border-rose-200 font-bold px-2.5 py-0.5 rounded-full text-[9px] uppercase tracking-wider">
                             Out of stock
                           </span>
