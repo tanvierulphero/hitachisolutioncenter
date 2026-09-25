@@ -98,7 +98,7 @@ export default function PublicCatalog({ products, onAdminClick }: PublicCatalogP
               <Phone className="w-3.5 h-3.5 text-blue-300" /> 01715-994956, 01799-498199
             </span>
             <span className="hidden sm:flex items-center gap-1">
-              <Mail className="w-3.5 h-3.5 text-blue-300" /> jubayermachineries@gmail.com
+              <Mail className="w-3.5 h-3.5 text-blue-300" /> ssengbd25@gmail.com
             </span>
           </div>
           <button 

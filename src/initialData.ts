@@ -89,10 +89,10 @@ export const INITIAL_STAFF_USERS: StaffUser[] = [
 export const DEFAULT_SETTINGS: BusinessSettings = {
   name: "hitachisolutioncenter",
   slogan: "Your Problem Solution is Sustainable Partner",
-  address: "Hazi Siddik Complex, Molla Market, Bason Sharok, Gazipur City.",
+  address: "M.R Trade Center, Bason Sharok, Gazipur City.",
   phone1: "01715-994956",
   phone2: "01799-498199",
-  email: "info@hitachisolutioncenter.com",
+  email: "ssengbd25@gmail.com",
   website: "www.hitachiairsolutioncenter.com",
   invoicePrefix: "HSC/INV/2026/",
   quotePrefix: "HSC/QT/2026/",

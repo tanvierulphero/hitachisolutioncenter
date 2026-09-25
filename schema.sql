@@ -138,6 +138,6 @@ CREATE TABLE `settings` (
 
 -- Seed Settings Data
 INSERT INTO `settings` (`id`, `name`, `slogan`, `address`, `phone1`, `phone2`, `email`, `website`, `invoice_prefix`, `quote_prefix`, `offer_prefix`, `bill_prefix`, `tax_rate`, `terms`, `signature_name`, `signature_label`) VALUES
-('global_settings', 'hitachisolutioncenter', 'Your Problem Solution is Sustainable Partner', 'Hazi Siddik Complex, Molla Market, Bason Sharok, Gazipur City.', '01715-994956', '01799-498199', 'info@hitachisolutioncenter.com', 'www.hitachiairsolutioncenter.com', 'HSC/INV/2026/', 'HSC/QT/2026/', 'HSC/OF/2026/', 'HSC/BILL/2026/', 5, '1. Delivery: Within 7 working days upon receipt of work order.\n2. Payment: 50% advance with work order & 50% upon delivery.\n3. Warranty: 1 Year comprehensive brand warranty.', 'MD MAHI UDDIN', 'Managing Director');
+('global_settings', 'hitachisolutioncenter', 'Your Problem Solution is Sustainable Partner', 'M.R Trade Center, Bason Sharok, Gazipur City.', '01715-994956', '01799-498199', 'ssengbd25@gmail.com', 'www.hitachiairsolutioncenter.com', 'HSC/INV/2026/', 'HSC/QT/2026/', 'HSC/OF/2026/', 'HSC/BILL/2026/', 5, '1. Delivery: Within 7 working days upon receipt of work order.\n2. Payment: 50% advance with work order & 50% upon delivery.\n3. Warranty: 1 Year comprehensive brand warranty.', 'MD MAHI UDDIN', 'Managing Director');
 
 SET FOREIGN_KEY_CHECKS = 1;
