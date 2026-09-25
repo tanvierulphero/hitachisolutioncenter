@@ -21,9 +21,26 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // Ensure uploads folder exists in parent or current directory
-$uploadDir = __DIR__ . '/../uploads/';
-if (!file_exists($uploadDir)) {
-    mkdir($uploadDir, 0755, true);
+$possibleUploadDirs = [
+    __DIR__ . '/../uploads/',
+    __DIR__ . '/uploads/',
+    $_SERVER['DOCUMENT_ROOT'] . '/uploads/'
+];
+
+$uploadDir = null;
+foreach ($possibleUploadDirs as $dir) {
+    if (!file_exists($dir)) {
+        @mkdir($dir, 0755, true);
+    }
+    if (file_exists($dir) && is_writable($dir)) {
+        $uploadDir = $dir;
+        break;
+    }
+}
+
+if (!$uploadDir) {
+    $uploadDir = __DIR__ . '/../uploads/';
+    @mkdir($uploadDir, 0755, true);
 }
 
 // Handle File Upload from FormData
@@ -55,13 +72,14 @@ if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
     $destPath = $uploadDir . $newFileName;
 
     if (move_uploaded_file($fileTmpPath, $destPath)) {
+        @chmod($destPath, 0644);
         // Return relative path accessible via web browser
         $fileUrl = '/uploads/' . $newFileName;
         echo json_encode(['url' => $fileUrl, 'success' => true]);
         exit;
     } else {
         http_response_code(500);
-        echo json_encode(['error' => 'Failed to move uploaded file to target folder']);
+        echo json_encode(['error' => 'Failed to move uploaded file to target folder. Please check /uploads directory permissions on cPanel.']);
         exit;
     }
 }

@@ -394,9 +394,26 @@ try {
         // 6. IMAGE UPLOAD API
         // ----------------------------------------------------
         case 'upload':
-            $uploadDir = __DIR__ . '/../uploads/';
-            if (!file_exists($uploadDir)) {
-                mkdir($uploadDir, 0755, true);
+            $possibleUploadDirs = [
+                __DIR__ . '/../uploads/',
+                __DIR__ . '/uploads/',
+                $_SERVER['DOCUMENT_ROOT'] . '/uploads/'
+            ];
+
+            $uploadDir = null;
+            foreach ($possibleUploadDirs as $dir) {
+                if (!file_exists($dir)) {
+                    @mkdir($dir, 0755, true);
+                }
+                if (file_exists($dir) && is_writable($dir)) {
+                    $uploadDir = $dir;
+                    break;
+                }
+            }
+
+            if (!$uploadDir) {
+                $uploadDir = __DIR__ . '/../uploads/';
+                @mkdir($uploadDir, 0755, true);
             }
 
             if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
@@ -410,7 +427,9 @@ try {
                     exit;
                 }
                 $newName = 'prod_' . time() . '_' . substr(md5(uniqid()), 0, 8) . '.' . $ext;
-                if (move_uploaded_file($fileTmpPath, $uploadDir . $newName)) {
+                $targetFile = $uploadDir . $newName;
+                if (move_uploaded_file($fileTmpPath, $targetFile)) {
+                    @chmod($targetFile, 0644);
                     echo json_encode(['url' => '/uploads/' . $newName, 'success' => true]);
                     exit;
                 }
