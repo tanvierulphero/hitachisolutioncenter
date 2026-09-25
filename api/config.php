@@ -5,9 +5,9 @@
 // ========================================================
 
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'localmar_247');     // e.g. localmar_hitachi
-define('DB_USER', 'localmar_247');     // e.g. localmar_user
-define('DB_PASS', 'localmar_247'); // e.g. MySecretPassword123
+define('DB_NAME', 'localmar_hitachi');
+define('DB_USER', 'localmar_admin');
+define('DB_PASS', 'localmar_admin');
 
 function getDbConnection() {
     static $pdo = null;
