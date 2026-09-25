@@ -36,18 +36,7 @@ jobs:
             cp .htaccess deploy_dist/
           fi
 
-      - name: 🚀 Sync files to cPanel via SSH Key (SFTP)
-        if: ${{ secrets.SSH_PRIVATE_KEY != '' }}
-        uses: easingthemes/ssh-deploy@v5.1.0
-        with:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          REMOTE_HOST: ${{ secrets.SSH_HOST || 'localmarket247.top' }}
-          REMOTE_USER: ${{ secrets.SSH_USERNAME || 'localmar' }}
-          TARGET: ${{ secrets.SSH_TARGET_DIR || 'public_html/' }}
-          SOURCE: "deploy_dist/"
-
       - name: 🚀 Sync files to cPanel Hosting via FTP
-        if: ${{ secrets.SSH_PRIVATE_KEY == '' }}
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER || 'ftp.localmarket247.top' }}
