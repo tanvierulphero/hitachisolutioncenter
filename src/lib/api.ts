@@ -100,11 +100,44 @@ export const apiSaveSettings = (settings: BusinessSettings): Promise<BusinessSet
     body: JSON.stringify(settings),
   });
 
-// Helper to read file as base64 data URL
+// Helper to read and compress file as compact base64 data URL (max 800px, 70% JPEG quality)
+// Prevents cPanel LiteSpeed HTTP 503 errors caused by oversized POST payloads
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 800;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(e.target?.result as string);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        resolve(compressedDataUrl);
+      };
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = e.target?.result as string;
+    };
     reader.onerror = () => reject(new Error('Failed to read file'));
     reader.readAsDataURL(file);
   });
