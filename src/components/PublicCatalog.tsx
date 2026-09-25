@@ -90,7 +90,10 @@ export default function PublicCatalog({ products, onAdminClick }: PublicCatalogP
       {/* Top Notification Bar */}
       <div className="bg-blue-900 text-slate-100 text-[11px] md:text-xs font-semibold py-2 px-4 flex justify-between items-center no-print">
         <div className="flex items-center gap-4 max-w-7xl mx-auto w-full justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3 md:gap-4">
+            <span className="bg-blue-800 text-blue-100 font-extrabold px-2.5 py-0.5 rounded text-[10px] tracking-wide border border-blue-700">
+              Supported by Superstar Engineering BD
+            </span>
             <span className="flex items-center gap-1">
               <Phone className="w-3.5 h-3.5 text-blue-300" /> 01715-994956, 01799-498199
             </span>
@@ -100,7 +103,7 @@ export default function PublicCatalog({ products, onAdminClick }: PublicCatalogP
           </div>
           <button 
             onClick={onAdminClick}
-            className="flex items-center gap-1 text-slate-100 hover:text-white bg-blue-800 hover:bg-blue-700 font-bold px-3 py-1 rounded transition-colors text-[11px] cursor-pointer"
+            className="flex items-center gap-1 text-slate-100 hover:text-white bg-blue-800 hover:bg-blue-700 font-bold px-3 py-1 rounded transition-colors text-[11px] cursor-pointer flex-shrink-0"
           >
             <Settings2 className="w-3 h-3" />
             Admin Dashboard
@@ -112,9 +115,19 @@ export default function PublicCatalog({ products, onAdminClick }: PublicCatalogP
       <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs no-print">
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {/* Logo */}
-            <div className="h-11 w-auto flex-shrink-0">
-              <Logo className="h-full w-auto text-blue-900" />
+            {/* Logo & Technical Partner Tag */}
+            <div className="flex items-center gap-3">
+              <div className="h-11 w-auto flex-shrink-0">
+                <Logo className="h-full w-auto text-blue-900" />
+              </div>
+              <div className="hidden lg:flex flex-col justify-center border-l border-slate-200 pl-3">
+                <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest leading-none">
+                  Technical Partner
+                </span>
+                <span className="text-xs font-bold text-slate-800 tracking-tight mt-0.5">
+                  Superstar Engineering BD
+                </span>
+              </div>
             </div>
           </div>
 
@@ -562,10 +575,15 @@ export default function PublicCatalog({ products, onAdminClick }: PublicCatalogP
       </section>
 
       {/* Footer copyright */}
-      <footer className="bg-slate-950 text-slate-500 text-xs py-8 border-t border-slate-900 no-print">
+      <footer className="bg-slate-950 text-slate-400 text-xs py-8 border-t border-slate-900 no-print">
         <div className="max-w-7xl mx-auto px-4 md:px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
-          <p>&copy; 2026 hitachisolutioncenter. All rights reserved.</p>
-          <p className="italic text-[10px]">Your Problem Solution is Sustainable Partner.</p>
+          <div>
+            <p className="font-bold text-slate-200">
+              &copy; 2026 hitachisolutioncenter &bull; <span className="text-blue-400">Supported by Superstar Engineering BD</span>
+            </p>
+            <p className="text-[11px] text-slate-500 mt-0.5">All Rights Reserved &bull; Gazipur Industrial Zone, Bangladesh</p>
+          </div>
+          <p className="italic text-xs font-medium text-slate-400">"Your Problem Solution is Sustainable Partner."</p>
         </div>
       </footer>
 
