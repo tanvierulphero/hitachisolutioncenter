@@ -121,8 +121,8 @@ export default function FieldDispatchManager({
 
     const cust = customers.find(c => c.id === formCustomerId) || customers[0] || {
       id: 'cust-general',
-      name: 'Walk-in Client / কাস্টমার',
-      company: 'General Company / ক্লায়েন্ট',
+      name: 'Walk-in Client / Customer',
+      company: 'General Company / Client',
       phone: '01700-000000'
     };
 
@@ -454,7 +454,7 @@ export default function FieldDispatchManager({
         <div className="space-y-1">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-800/80 text-blue-200 text-[10px] font-bold uppercase tracking-wider border border-blue-700">
             <Truck className="w-3.5 h-3.5 text-blue-300" />
-            Field Movement & Dispatch Tracker (ফিল্ড মুভমেন্ট ও সার্ভিস চালানের হিসাব)
+            Field Movement & Dispatch Tracker
           </div>
           <h2 className="text-xl font-black font-display tracking-tight text-white">
             Staff Product Movement & Field Reconciliation Hub
@@ -469,7 +469,7 @@ export default function FieldDispatchManager({
           className="px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer flex-shrink-0"
         >
           <Plus className="w-4.5 h-4.5" />
-          + নতুন ডিসপ্যাচ চালান তৈরি করুন
+          + Create New Dispatch Slip
         </button>
       </div>
 
@@ -483,7 +483,7 @@ export default function FieldDispatchManager({
           <div className="text-2xl font-black font-display text-slate-900">
             {kpis.pendingCount} <span className="text-xs font-semibold text-slate-500">Challans</span>
           </div>
-          <p className="text-[10px] text-amber-600 font-bold">মাঠে রয়েছে (Pending Return)</p>
+          <p className="text-[10px] text-amber-600 font-bold">In Field (Pending Return)</p>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-1">
@@ -494,7 +494,7 @@ export default function FieldDispatchManager({
           <div className="text-2xl font-black font-display text-blue-950">
             {kpis.totalIssued} <span className="text-xs font-semibold text-slate-500">Units</span>
           </div>
-          <p className="text-[10px] text-slate-500 font-bold">শোরুম থেকে বাইরে নিয়ে যাওয়া মোট মালামাল</p>
+          <p className="text-[10px] text-slate-500 font-bold">Total Goods Dispatched from Warehouse</p>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-1">
@@ -505,7 +505,7 @@ export default function FieldDispatchManager({
           <div className="text-2xl font-black font-display text-emerald-700">
             {kpis.totalSold} <span className="text-xs font-semibold text-slate-500">Units</span>
           </div>
-          <p className="text-[10px] text-emerald-600 font-bold">অন-সাইটে সরাসরি ব্যবহৃত/বিক্রিত</p>
+          <p className="text-[10px] text-emerald-600 font-bold">Directly Sold / Installed On-Site</p>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-1">
@@ -516,7 +516,7 @@ export default function FieldDispatchManager({
           <div className="text-2xl font-black font-display text-purple-900">
             {kpis.totalReturned} <span className="text-xs font-semibold text-slate-500">Units</span>
           </div>
-          <p className="text-[10px] text-purple-700 font-bold">শোরুমে অক্ষত ফেরত জমা মালামাল</p>
+          <p className="text-[10px] text-purple-700 font-bold">Unused Items Returned Intact</p>
         </div>
       </div>
 
@@ -542,7 +542,7 @@ export default function FieldDispatchManager({
             onChange={(e) => setSelectedStaffFilter(e.target.value)}
             className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-semibold text-slate-700"
           >
-            <option value="All">সকল স্টাফ (All Staff)</option>
+            <option value="All">All Staff</option>
             {staffUsers.map(s => (
               <option key={s.id} value={s.id}>{s.name} ({s.designation || s.role})</option>
             ))}
@@ -554,7 +554,7 @@ export default function FieldDispatchManager({
             onChange={(e) => setSelectedCustomerFilter(e.target.value)}
             className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-semibold text-slate-700"
           >
-            <option value="All">সকল কোম্পানি (All Clients)</option>
+            <option value="All">All Clients</option>
             {customers.map(c => (
               <option key={c.id} value={c.id}>{c.company || c.name}</option>
             ))}
@@ -566,10 +566,10 @@ export default function FieldDispatchManager({
             onChange={(e) => setSelectedStatusFilter(e.target.value)}
             className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-semibold text-slate-700"
           >
-            <option value="All">সকল স্টেটাস (All Status)</option>
-            <option value="Pending Return">Pending Return (মাঠে রয়েছে)</option>
-            <option value="Completed">Completed (ফেরত হিসাব সম্পন্ন)</option>
-            <option value="Cancelled">Cancelled (বাতিল)</option>
+            <option value="All">All Status</option>
+            <option value="Pending Return">Pending Return</option>
+            <option value="Completed">Completed</option>
+            <option value="Cancelled">Cancelled</option>
           </select>
         </div>
 
@@ -664,7 +664,7 @@ export default function FieldDispatchManager({
                               className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] uppercase rounded-lg transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
                             >
                               <RotateCcw className="w-3 h-3" />
-                              রিটার্ন এন্ট্রি করুন
+                              Record Return Entry
                             </button>
                           )}
 
@@ -696,7 +696,7 @@ export default function FieldDispatchManager({
           <div className="p-12 text-center space-y-2">
             <Truck className="w-10 h-10 text-slate-300 mx-auto" />
             <h4 className="font-bold text-slate-700">No Field Dispatches Found</h4>
-            <p className="text-slate-400 text-xs">Click "+ নতুন ডিসপ্যাচ চালান তৈরি করুন" to register a new staff product movement.</p>
+            <p className="text-slate-400 text-xs">Click "+ Create New Dispatch Slip" to register a new staff product movement.</p>
           </div>
         )}
       </div>
@@ -708,7 +708,7 @@ export default function FieldDispatchManager({
             <div className="bg-blue-900 text-white p-5 flex justify-between items-center">
               <div>
                 <span className="text-[10px] font-bold text-blue-300 uppercase tracking-widest block">Outward Field Movement</span>
-                <h3 className="text-base font-bold font-display">নতুন ডিসপ্যাচ চালান তৈরি করুন (New Field Issue Slip)</h3>
+                <h3 className="text-base font-bold font-display">Create New Field Issue Slip</h3>
               </div>
               <button onClick={() => setIsCreating(false)} className="text-white/80 hover:text-white cursor-pointer">
                 <X className="w-5 h-5" />
@@ -720,7 +720,7 @@ export default function FieldDispatchManager({
               {/* Staff & Customer */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="font-bold text-slate-700 block">মালামাল বহনকারী স্টাফ (Responsible Staff) <span className="text-rose-600">*</span></label>
+                  <label className="font-bold text-slate-700 block">Responsible Staff Member</label>
                   <select
                     value={formStaffId}
                     onChange={(e) => setFormStaffId(e.target.value)}
@@ -735,13 +735,13 @@ export default function FieldDispatchManager({
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="font-bold text-slate-700 block">গ্রাহক / ক্লায়েন্ট কোম্পানি (Destination Client)</label>
+                  <label className="font-bold text-slate-700 block">Destination Client Company</label>
                   <select
                     value={formCustomerId}
                     onChange={(e) => setFormCustomerId(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 focus:bg-white rounded-xl p-3 font-semibold text-slate-900"
                   >
-                    <option value="">&mdash; Walk-in Client / সাধারণ কাস্টমার &mdash;</option>
+                    <option value="">&mdash; Walk-in Client / General Customer &mdash;</option>
                     {customers.map(c => {
                       const compId = c.companyId || `COMP-${c.id.replace('cust-', '100')}`;
                       return (
@@ -757,7 +757,7 @@ export default function FieldDispatchManager({
               {/* Purpose & Date */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="sm:col-span-2 space-y-1.5">
-                  <label className="font-bold text-slate-700 block">উদ্দেশ্য / কারণ (Purpose of Field Issue)</label>
+                  <label className="font-bold text-slate-700 block">Purpose of Field Issue</label>
                   <input
                     type="text"
                     value={formPurpose}
@@ -767,7 +767,7 @@ export default function FieldDispatchManager({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="font-bold text-slate-700 block">চালান তারিখ (Date)</label>
+                  <label className="font-bold text-slate-700 block">Dispatch Date</label>
                   <input
                     type="date"
                     value={formDispatchDate}
@@ -780,7 +780,7 @@ export default function FieldDispatchManager({
               {/* Product Selector Dropdown */}
               <div className="space-y-2 border-t border-slate-100 pt-4">
                 <div className="flex justify-between items-center">
-                  <label className="font-bold text-slate-800">ইস্যুকৃত পণ্য নির্বাচন করুন (Select Products to Issue)</label>
+                  <label className="font-bold text-slate-800">Select Products to Issue</label>
                   <span className="text-[10px] text-slate-400">Clicking product adds 1 unit</span>
                 </div>
                 
@@ -849,7 +849,7 @@ export default function FieldDispatchManager({
 
               {/* Notes */}
               <div className="space-y-1">
-                <label className="font-bold text-slate-700 block">নোট বা বিশেষ নির্দেশনা (Dispatch Notes)</label>
+                <label className="font-bold text-slate-700 block">Dispatch Notes</label>
                 <textarea
                   rows={2}
                   value={formNotes}
@@ -871,7 +871,7 @@ export default function FieldDispatchManager({
                   type="submit"
                   className="px-6 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold uppercase rounded-xl shadow-md cursor-pointer"
                 >
-                  চালান ইস্যু করুন (Issue Dispatch)
+                  Issue Dispatch Slip
                 </button>
               </div>
             </form>
@@ -886,7 +886,7 @@ export default function FieldDispatchManager({
             <div className="bg-emerald-900 text-white p-5 flex justify-between items-center">
               <div>
                 <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest block">Reconciliation & Stock Return</span>
-                <h3 className="text-base font-bold font-display">রিটার্ন এন্ট্রি ও এডজাস্টমেন্ট হিসাব ({reconcilingDispatch.dispatchNumber})</h3>
+                <h3 className="text-base font-bold font-display">Return Entry & Stock Settlement ({reconcilingDispatch.dispatchNumber})</h3>
               </div>
               <button onClick={() => setReconcilingDispatch(null)} className="text-white/80 hover:text-white cursor-pointer">
                 <X className="w-5 h-5" />
@@ -909,7 +909,7 @@ export default function FieldDispatchManager({
               {/* Items Reconciliation Inputs */}
               <div className="space-y-3">
                 <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider">
-                  ইস্যুকৃত মালামালের ফলাফল এন্ট্রি করুন (Reconcile Quantities):
+                  Reconcile Issued Quantities:
                 </h4>
 
                 <div className="space-y-3">
@@ -927,7 +927,7 @@ export default function FieldDispatchManager({
 
                       <div className="grid grid-cols-2 gap-4 pt-1">
                         <div className="space-y-1">
-                          <label className="font-bold text-emerald-800 block">অন-সাইটে বিক্রিত/ব্যবহৃত (Sold Qty):</label>
+                          <label className="font-bold text-emerald-800 block">Sold / Installed On-site:</label>
                           <input
                             type="number"
                             min={0}
@@ -939,7 +939,7 @@ export default function FieldDispatchManager({
                         </div>
 
                         <div className="space-y-1">
-                          <label className="font-bold text-purple-800 block">অফিসে ফেরত জমা (Returned Qty):</label>
+                          <label className="font-bold text-purple-800 block">Returned to Warehouse:</label>
                           <div className="p-2 bg-purple-50 border border-purple-300 rounded-lg font-extrabold text-purple-900 text-center">
                             {item.returnedQty} {item.unit}
                           </div>
@@ -959,17 +959,17 @@ export default function FieldDispatchManager({
                     onChange={(e) => setAutoGenerateInvoice(e.target.checked)}
                     className="w-4 h-4 accent-blue-900 rounded cursor-pointer"
                   />
-                  অন-সাইটে বিক্রিত পণ্যগুলোর জন্য ক্লায়েন্টের নামে সরাসরি সেলস ইনভয়েস (Sales Invoice) তৈরি করুন
+                  Automatically generate Sales Invoice for on-site sold items under client's name
                 </label>
                 <p className="text-[10px] text-slate-500 pl-6 leading-relaxed">
-                  যদি চেক করা থাকে, তবে অন-সাইটে বিক্রিত পার্টসের জন্য {reconcilingDispatch.customerCompany}-এর নামে স্বয়ংক্রিয়ভাবে ইনভয়েস তৈরি হয়ে ইনভয়েস তালিকায় যুক্ত হবে।
+                  If checked, a sales invoice will be automatically generated and saved for {reconcilingDispatch.customerCompany}.
                 </p>
               </div>
 
               {/* Date & Notes */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="font-bold text-slate-700 block">ফেরত ও নিষ্পত্তির তারিখ</label>
+                  <label className="font-bold text-slate-700 block">Return & Settlement Date</label>
                   <input
                     type="date"
                     value={reconcileDate}
@@ -978,7 +978,7 @@ export default function FieldDispatchManager({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="font-bold text-slate-700 block">রিটার্ন নোটস (Remarks)</label>
+                  <label className="font-bold text-slate-700 block">Return Remarks / Notes</label>
                   <input
                     type="text"
                     value={reconcileNotes}
@@ -1002,7 +1002,7 @@ export default function FieldDispatchManager({
                   onClick={handleSaveReconciliation}
                   className="px-6 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold uppercase rounded-xl shadow-md cursor-pointer"
                 >
-                  হিসাব সংরক্ষণ ও রিটার্ন সম্পন্ন করুন
+                  Save Settlement & Complete Return
                 </button>
               </div>
             </div>

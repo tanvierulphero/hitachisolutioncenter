@@ -616,7 +616,7 @@ export default function App() {
                     }`}
                   >
                     <Truck className="w-4 h-4 text-amber-400" />
-                    Field Dispatches / চালান
+                    Field Dispatches
                   </button>
                 )}
 
@@ -631,7 +631,7 @@ export default function App() {
                     }`}
                   >
                     <Building2 className="w-4 h-4 text-teal-400" />
-                    Company Profiles / আইডি
+                    Company Profiles
                   </button>
                 )}
 

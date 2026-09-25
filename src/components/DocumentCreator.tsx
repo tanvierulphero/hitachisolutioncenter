@@ -219,7 +219,7 @@ export default function DocumentCreator({
   const handleCreateCustomer = (e: React.FormEvent) => {
     e.preventDefault();
     const generatedCompId = newCustomer.companyId.trim() || `COMP-${1001 + customers.length}`;
-    const compName = newCustomer.company.trim() || newCustomer.name.trim() || 'General Customer / নগদ কাস্টমার';
+    const compName = newCustomer.company.trim() || newCustomer.name.trim() || 'General Customer / Cash Client';
     const contactName = newCustomer.name.trim() || compName;
     const contactPhone = newCustomer.phone.trim() || '01700-000000';
 
@@ -244,8 +244,8 @@ export default function DocumentCreator({
     const cust = customers.find(c => c.id === selectedCustomerId) || {
       id: `cust-walkin-${Date.now()}`,
       companyId: 'COMP-WALKIN',
-      name: 'Walk-in Client / সাধারণ কাস্টমার',
-      company: 'General Sales / নগদ বিক্রয়',
+      name: 'Walk-in Client / General Customer',
+      company: 'General Sales / Cash Client',
       phone: '01700-000000',
       email: '',
       address: 'Gazipur, Bangladesh'
@@ -383,7 +383,7 @@ export default function DocumentCreator({
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
                 {/* Unique ID Quick Search Input */}
                 <div className="sm:col-span-5 space-y-1">
-                  <label className="font-bold text-slate-700 block">ইউনিক আইডি লিখে খুঁজুন (Company ID Search)</label>
+                  <label className="font-bold text-slate-700 block">Search by Company ID</label>
                   <input
                     type="text"
                     placeholder="e.g. COMP-1001"
@@ -395,13 +395,13 @@ export default function DocumentCreator({
 
                 {/* Dropdown Customer List */}
                 <div className="sm:col-span-4 space-y-1">
-                  <label className="font-bold text-slate-700 block">কাস্টমার নির্বাচন (Select Client)</label>
+                  <label className="font-bold text-slate-700 block">Select Client / Recipient</label>
                   <select
                     value={selectedCustomerId}
                     onChange={(e) => setSelectedCustomerId(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 font-semibold text-slate-800 focus:outline-hidden cursor-pointer"
                   >
-                    <option value="">&mdash; Walk-in Client / সাধারণ কাস্টমার &mdash;</option>
+                    <option value="">&mdash; Walk-in Client / General Customer &mdash;</option>
                     {customers.map(c => {
                       const compId = c.companyId || `COMP-${c.id.replace('cust-', '100')}`;
                       return (
@@ -421,7 +421,7 @@ export default function DocumentCreator({
                     className="w-full py-2.5 border border-dashed border-blue-300 hover:border-blue-900 text-blue-900 bg-blue-50/50 hover:bg-blue-50 font-bold uppercase tracking-wider rounded-lg flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
                   >
                     <UserPlus className="w-4 h-4" />
-                    + নতুন কাস্টমার
+                    + New Customer
                   </button>
                 </div>
               </div>
@@ -433,14 +433,14 @@ export default function DocumentCreator({
                 <div className="flex justify-between items-center">
                   <h4 className="font-bold text-slate-900 flex items-center gap-1.5">
                     <UserPlus className="w-4 h-4 text-blue-900" />
-                    নতুন কাস্টমার নিবন্ধন (সবগুলো ঘর ঐচ্ছিক)
+                    Register New Customer (All fields optional)
                   </h4>
                   <span className="text-[10px] text-slate-400 font-bold">You can leave any field blank</span>
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-600">ইউনিক কোম্পানি আইডি</label>
+                    <label className="font-bold text-slate-600">Unique Company ID</label>
                     <input
                       type="text"
                       placeholder={`e.g. COMP-${1001 + customers.length}`}
@@ -451,7 +451,7 @@ export default function DocumentCreator({
                   </div>
 
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-600">কোম্পানির নাম (Optional)</label>
+                    <label className="font-bold text-slate-600">Company Name (Optional)</label>
                     <input
                       type="text"
                       placeholder="e.g. Apex Textile Mills"
@@ -462,7 +462,7 @@ export default function DocumentCreator({
                   </div>
 
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-600">কাস্টমার / ব্যক্তির নাম (Optional)</label>
+                    <label className="font-bold text-slate-600">Contact Person Name (Optional)</label>
                     <input
                       type="text"
                       placeholder="e.g. Sabbir Rahman"
@@ -475,7 +475,7 @@ export default function DocumentCreator({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-600">মোবাইল ফোন (Optional)</label>
+                    <label className="font-bold text-slate-600">Phone Number (Optional)</label>
                     <input
                       type="tel"
                       placeholder="e.g. 01712-456789"
@@ -485,7 +485,7 @@ export default function DocumentCreator({
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-600">ইমেইল (Optional)</label>
+                    <label className="font-bold text-slate-600">Email Address (Optional)</label>
                     <input
                       type="email"
                       placeholder="e.g. purchase@apex.com"

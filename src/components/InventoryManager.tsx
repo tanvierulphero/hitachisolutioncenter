@@ -475,7 +475,7 @@ export default function InventoryManager({
                             title="View Lifetime History, Profit/Loss & Buyers Ledger"
                           >
                             <BarChart3 className="w-3.5 h-3.5 text-blue-700" />
-                            লাইফটাইম হিসাব
+                            Lifetime Ledger
                           </button>
 
                           <button
@@ -758,7 +758,7 @@ export default function InventoryManager({
                   </span>
                 </div>
                 <h3 className="text-base font-black font-display text-white">
-                  {productAnalytics.historyProduct.name} - লাইফটাইম হিসাব ও ক্রেতা খাতা
+                  {productAnalytics.historyProduct.name} - Lifetime Analytics & Buyers Ledger
                 </h3>
               </div>
 
@@ -775,45 +775,45 @@ export default function InventoryManager({
               {/* Stat Cards 6-Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl space-y-1">
-                  <span className="text-[9px] font-bold text-slate-400 uppercase block">মোট ক্রয় করা হইছে</span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase block">Total Purchased</span>
                   <span className="text-lg font-black font-display text-slate-900 block">
                     {productAnalytics.totalQtyPurchased} <span className="text-xs text-slate-500 font-semibold">{productAnalytics.historyProduct.unit}</span>
                   </span>
-                  <span className="text-[9px] text-slate-500 font-semibold">বিল ও প্রাথমিক স্টক</span>
+                  <span className="text-[9px] text-slate-500 font-semibold">Bills & Initial Stock</span>
                 </div>
 
                 <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl space-y-1">
-                  <span className="text-[9px] font-bold text-slate-400 uppercase block">মোট বিক্রয় করা হইছে</span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase block">Total Sold</span>
                   <span className="text-lg font-black font-display text-blue-900 block">
                     {productAnalytics.totalQtySold} <span className="text-xs text-slate-500 font-semibold">{productAnalytics.historyProduct.unit}</span>
                   </span>
-                  <span className="text-[9px] text-blue-700 font-semibold">ইনভয়েসে মোট বিক্রিত</span>
+                  <span className="text-[9px] text-blue-700 font-semibold">Invoices Total Sold</span>
                 </div>
 
                 <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl space-y-1">
-                  <span className="text-[9px] font-bold text-slate-400 uppercase block">বর্তমান মজুদ স্টক</span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase block">Current Available Stock</span>
                   <span className={`text-lg font-black font-display block ${
                     productAnalytics.availableStock < 5 ? 'text-rose-600' : 'text-slate-900'
                   }`}>
                     {productAnalytics.availableStock} <span className="text-xs text-slate-500 font-semibold">{productAnalytics.historyProduct.unit}</span>
                   </span>
-                  <span className="text-[9px] text-slate-500 font-semibold">শোরুম ওয়্যারহাউস</span>
+                  <span className="text-[9px] text-slate-500 font-semibold">Showroom Warehouse</span>
                 </div>
 
                 <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl space-y-1">
-                  <span className="text-[9px] font-bold text-slate-400 uppercase block">মোট বিক্রয় মূল্য</span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase block">Total Sales Revenue</span>
                   <span className="text-lg font-black font-display text-blue-950 block">
                     ৳{productAnalytics.totalSalesRevenue.toLocaleString()}
                   </span>
-                  <span className="text-[9px] text-slate-500 font-semibold">মোট আয়</span>
+                  <span className="text-[9px] text-slate-500 font-semibold">Total Revenue</span>
                 </div>
 
                 <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl space-y-1">
-                  <span className="text-[9px] font-bold text-slate-400 uppercase block">মোট ক্রয় খরচ</span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase block">Total Purchase Cost</span>
                   <span className="text-lg font-black font-display text-slate-800 block">
                     ৳{productAnalytics.totalPurchaseCostActual.toLocaleString()}
                   </span>
-                  <span className="text-[9px] text-slate-500 font-semibold">ক্রয় বাবদ ব্যয়</span>
+                  <span className="text-[9px] text-slate-500 font-semibold">Procurement Cost</span>
                 </div>
 
                 <div className={`p-3 rounded-xl space-y-1 border ${
@@ -822,7 +822,7 @@ export default function InventoryManager({
                   <span className={`text-[9px] font-bold uppercase block ${
                     productAnalytics.isProfit ? 'text-emerald-800' : 'text-rose-800'
                   }`}>
-                    {productAnalytics.isProfit ? 'সর্বমোট নিট লাভ' : 'সর্বমোট নিট ক্ষতি'}
+                    {productAnalytics.isProfit ? 'Net Profit' : 'Net Loss'}
                   </span>
                   <span className={`text-lg font-black font-display block ${
                     productAnalytics.isProfit ? 'text-emerald-800' : 'text-rose-800'
@@ -838,12 +838,12 @@ export default function InventoryManager({
                 </div>
               </div>
 
-              {/* TABLE 1: BUYERS LEDGER ("কার কাছে কত পিস বিক্রয় হইছে") */}
+              {/* TABLE 1: BUYERS LEDGER ("Buyers Sales Ledger") */}
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <h4 className="font-bold text-slate-900 text-xs font-display flex items-center gap-1.5">
                     <Building2 className="w-4 h-4 text-blue-900" />
-                    কার কার কাছে কত পিস বিক্রয় হইছে (Buyers Sales Ledger)
+                    Buyers Sales Ledger
                   </h4>
                   <span className="text-[10px] text-slate-400 font-bold">
                     {productAnalytics.invoiceSales.length} Customer Transactions
@@ -855,13 +855,13 @@ export default function InventoryManager({
                     <table className="w-full text-left">
                       <thead>
                         <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                          <th className="py-2.5 px-3">তারিখ ও ইনভয়েস নং</th>
-                          <th className="py-2.5 px-3">ক্রেতা কোম্পানি / নাম</th>
-                          <th className="py-2.5 px-3 text-center">বিক্রিত পরিমাণ</th>
-                          <th className="py-2.5 px-3 text-right">একক মূল্য</th>
-                          <th className="py-2.5 px-3 text-right">মোট বিক্রি</th>
-                          <th className="py-2.5 px-3 text-center">ইনভয়েস স্টেটাস</th>
-                          <th className="py-2.5 px-3 text-right">অ্যাকশন</th>
+                          <th className="py-2.5 px-3">Date & Invoice No.</th>
+                          <th className="py-2.5 px-3">Buyer Company / Name</th>
+                          <th className="py-2.5 px-3 text-center">Qty Sold</th>
+                          <th className="py-2.5 px-3 text-right">Unit Price</th>
+                          <th className="py-2.5 px-3 text-right">Line Total</th>
+                          <th className="py-2.5 px-3 text-center">Invoice Status</th>
+                          <th className="py-2.5 px-3 text-right">Action</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 font-sans">
@@ -917,28 +917,28 @@ export default function InventoryManager({
                   </div>
                 ) : (
                   <div className="p-6 text-center text-slate-400 border border-slate-200 rounded-xl bg-slate-50">
-                    <p className="font-bold text-slate-700">এই প্রডাক্টটির এখনও কোন বিক্রয় ইনভয়েস তৈরি হয়নি</p>
+                    <p className="font-bold text-slate-700">No sales invoices recorded for this product yet.</p>
                   </div>
                 )}
               </div>
 
-              {/* TABLE 2: PURCHASE & SUPPLIER LOG ("কোথা থেকে কত পিস ক্রয় করা হইছে") */}
+              {/* TABLE 2: PURCHASE & SUPPLIER LOG */}
               {productAnalytics.purchaseRecords.length > 0 && (
                 <div className="space-y-3 pt-2">
                   <h4 className="font-bold text-slate-900 text-xs font-display flex items-center gap-1.5">
                     <ShoppingBag className="w-4 h-4 text-emerald-700" />
-                    কোথা থেকে কত পিস ক্রয় করা হইছে (Purchase Bills Log)
+                    Purchase Bills & Supplier Log
                   </h4>
 
                   <div className="border border-slate-200 rounded-xl overflow-hidden">
                     <table className="w-full text-left">
                       <thead>
                         <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                          <th className="py-2.5 px-3">বিল নম্বর ও তারিখ</th>
-                          <th className="py-2.5 px-3">সরবরাহকারী (Supplier Vendor)</th>
-                          <th className="py-2.5 px-3 text-center">ক্রয়কৃত পরিমাণ</th>
-                          <th className="py-2.5 px-3 text-right">একক ক্রয়মূল্য</th>
-                          <th className="py-2.5 px-3 text-right">মোট খরচ</th>
+                          <th className="py-2.5 px-3">Bill No. & Date</th>
+                          <th className="py-2.5 px-3">Supplier Vendor</th>
+                          <th className="py-2.5 px-3 text-center">Qty Purchased</th>
+                          <th className="py-2.5 px-3 text-right">Unit Buy Price</th>
+                          <th className="py-2.5 px-3 text-right">Total Cost</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 font-sans">
@@ -979,7 +979,7 @@ export default function InventoryManager({
                 onClick={() => setHistoryProduct(null)}
                 className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold uppercase rounded-xl cursor-pointer"
               >
-                বন্ধ করুন (Close)
+                Close
               </button>
             </div>
 
