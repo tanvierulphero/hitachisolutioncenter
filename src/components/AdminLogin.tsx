@@ -99,21 +99,18 @@ export default function AdminLogin({ staffUsers, onLoginSuccess, onBackToCatalog
         <div className="absolute top-0 left-0 right-0 h-1.5 bg-blue-900"></div>
 
         {/* Brand identity header */}
-        <div className="text-center space-y-2">
-          <div className="h-14 w-auto flex justify-center mb-4">
+        <div className="text-center space-y-1">
+          <div className="h-14 w-auto flex justify-center mb-3">
             <Logo className="h-full w-auto text-blue-900" />
           </div>
           <h2 className="text-xl font-black font-display text-slate-900 leading-tight">
             Private Workspace Login
           </h2>
-          <p className="text-xs text-slate-500 max-w-xs mx-auto pt-1 leading-relaxed">
-            Enter your assigned sub-account passcode to access the workspace according to your role permissions.
-          </p>
         </div>
 
         {/* Quick Staff Account Selector Pills */}
         {staffUsers.length > 0 && (
-          <div className="space-y-1.5 pt-2">
+          <div className="space-y-1.5 pt-1">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
               Quick Select Sub-Account:
             </label>
@@ -186,14 +183,6 @@ export default function AdminLogin({ staffUsers, onLoginSuccess, onBackToCatalog
             </div>
           </div>
 
-          {/* Security Note */}
-          <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-[11px] text-slate-500 leading-normal flex gap-2">
-            <ShieldCheck className="w-4 h-4 text-blue-800 flex-shrink-0 mt-0.5" />
-            <span>
-              Please enter your assigned account passcode manually to verify identity and open workspace.
-            </span>
-          </div>
-
           {/* Error Message */}
           {error && (
             <p className="text-xs font-bold text-rose-600 bg-rose-50 border border-rose-200 p-2.5 rounded-xl text-center animate-shake">
@@ -209,11 +198,24 @@ export default function AdminLogin({ staffUsers, onLoginSuccess, onBackToCatalog
             Authenticate & Open Workspace
           </button>
         </form>
+
+        {/* Developer Info Card Section */}
+        <div className="pt-4 border-t border-slate-100 text-center text-xs space-y-1 bg-slate-50/80 -mx-8 -mb-8 p-4 rounded-b-2xl border-slate-200/80">
+          <p className="font-extrabold text-blue-950 text-[11px] tracking-wide uppercase">
+            Create BY: Tech Item
+          </p>
+          <p className="font-medium text-slate-700 text-xs">
+            Developer: <span className="font-bold text-slate-900">Md. Tanvirul Islam</span>
+          </p>
+          <p className="font-bold text-blue-900 text-xs font-mono">
+            Mob: 01840684615
+          </p>
+        </div>
       </div>
 
-      {/* Slogan */}
-      <div className="text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest pt-8">
-        "Your Problem Solution is Sustainable Partner"
+      {/* Footer Branding */}
+      <div className="text-center text-[10px] text-slate-400 font-semibold tracking-wider pt-6">
+        &copy; 2026 Jubayer Machineries &bull; Powered by Tech Item
       </div>
     </div>
   );

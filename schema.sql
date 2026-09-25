@@ -80,14 +80,14 @@ CREATE TABLE `documents` (
   `terms` TEXT,
   `notes` TEXT,
   `signature_label` VARCHAR(255) DEFAULT 'Authorized Signature',
-  `signature_name` VARCHAR(255) DEFAULT 'Hitachi Air Solution Center',
+  `signature_name` VARCHAR(255) DEFAULT 'Jubayer Machineries',
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Seed Documents Data
 INSERT INTO `documents` (`id`, `type`, `doc_number`, `date`, `due_date`, `customer_id`, `customer_name`, `customer_company`, `customer_phone`, `customer_email`, `customer_address`, `subject`, `salutation`, `opening_paragraph`, `closing_paragraph`, `items`, `subtotal`, `tax_rate`, `tax_amount`, `discount`, `total`, `paid_amount`, `due_amount`, `status`, `terms`, `notes`, `signature_label`, `signature_name`) VALUES
-('doc-1', 'INVOICE', 'HSC/INV/2026/001', '2026-03-01', '2026-03-15', 'cust-1', 'Anwar Hossain', 'Ha-Meem Textile Mills Ltd.', '01711-223344', 'anwar@hameemgroup.com', 'Nishat Nagar, Tongi, Gazipur.', 'Supply & Commissioning of Hitachi 37kW Screw Compressor', 'Dear Sir,', 'We are pleased to submit our commercial invoice for the high-efficiency screw air compressor supplied as per your work order.', 'Thank you for choosing Hitachi Solution Center.', '[{"id":"item-1","name":"Hitachi Hiscrew 37 S-Type Screw Compressor","brand":"Hitachi","quantity":1,"price":650000,"total":650000,"unit":"Set"}]', 650000, 5, 32500, 10000, 672500, 400000, 272500, 'PARTIAL', '1. Warranty: 1 Year.\n2. Payment: 50% Advance.', 'Delivered to Tongi Plant', 'Managing Director', 'MD MAHI UDDIN');
+('doc-1', 'INVOICE', 'JM/INV/2026/001', '2026-03-01', '2026-03-15', 'cust-1', 'Anwar Hossain', 'Ha-Meem Textile Mills Ltd.', '01711-223344', 'anwar@hameemgroup.com', 'Nishat Nagar, Tongi, Gazipur.', 'Supply & Commissioning of Hitachi 37kW Screw Compressor', 'Dear Sir,', 'We are pleased to submit our commercial invoice for the high-efficiency screw air compressor supplied as per your work order.', 'Thank you for choosing Jubayer Machineries.', '[{"id":"item-1","name":"Hitachi Hiscrew 37 S-Type Screw Compressor","brand":"Hitachi","quantity":1,"price":650000,"total":650000,"unit":"Set"}]', 650000, 5, 32500, 10000, 672500, 400000, 272500, 'PARTIAL', '1. Warranty: 1 Year.\n2. Payment: 50% Advance.', 'Delivered to Tongi Plant', 'Managing Director', 'MD MAHI UDDIN');
 
 
 -- 4. Table: staff_users
@@ -138,6 +138,6 @@ CREATE TABLE `settings` (
 
 -- Seed Settings Data
 INSERT INTO `settings` (`id`, `name`, `slogan`, `address`, `phone1`, `phone2`, `email`, `website`, `invoice_prefix`, `quote_prefix`, `offer_prefix`, `bill_prefix`, `tax_rate`, `terms`, `signature_name`, `signature_label`) VALUES
-('global_settings', 'hitachisolutioncenter', 'Your Problem Solution is Sustainable Partner', 'M.R Trade Center, Bason Sharok, Gazipur City.', '01715-994956', '01799-498199', 'ssengbd25@gmail.com', 'www.hitachiairsolutioncenter.com', 'HSC/INV/2026/', 'HSC/QT/2026/', 'HSC/OF/2026/', 'HSC/BILL/2026/', 5, '1. Delivery: Within 7 working days upon receipt of work order.\n2. Payment: 50% advance with work order & 50% upon delivery.\n3. Warranty: 1 Year comprehensive brand warranty.', 'MD MAHI UDDIN', 'Managing Director');
+('global_settings', 'Jubayer Machineries', 'Your Problem Solution is Sustainable Partner', 'M.R Trade Center, Bason Sharok, Gazipur City.', '01715-994956', '01799-498199', 'ssengbd25@gmail.com', 'www.hitachiairsolutioncenter.com', 'JM/INV/2026/', 'JM/QT/2026/', 'JM/OF/2026/', 'JM/BILL/2026/', 5, '1. Delivery: Within 7 working days upon receipt of work order.\n2. Payment: 50% advance with work order & 50% upon delivery.\n3. Warranty: 1 Year comprehensive brand warranty.', 'MD MAHI UDDIN', 'Managing Director');
 
 SET FOREIGN_KEY_CHECKS = 1;

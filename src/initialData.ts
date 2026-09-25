@@ -87,17 +87,17 @@ export const INITIAL_STAFF_USERS: StaffUser[] = [
 ];
 
 export const DEFAULT_SETTINGS: BusinessSettings = {
-  name: "hitachisolutioncenter",
+  name: "Jubayer Machineries",
   slogan: "Your Problem Solution is Sustainable Partner",
   address: "M.R Trade Center, Bason Sharok, Gazipur City.",
   phone1: "01715-994956",
   phone2: "01799-498199",
   email: "ssengbd25@gmail.com",
   website: "www.hitachiairsolutioncenter.com",
-  invoicePrefix: "HSC/INV/2026/",
-  quotePrefix: "HSC/QT/2026/",
-  offerPrefix: "HSC/OF/2026/",
-  billPrefix: "HSC/BILL/2026/",
+  invoicePrefix: "JM/INV/2026/",
+  quotePrefix: "JM/QT/2026/",
+  offerPrefix: "JM/OF/2026/",
+  billPrefix: "JM/BILL/2026/",
   taxRate: 5, // 5% VAT
   terms: "1. Delivery: Within 7 working days upon receipt of work order.\n2. Payment: 50% advance with work order & 50% upon delivery.\n3. Warranty: 1 Year comprehensive brand warranty.\n4. Validity of this offer is 30 days.",
   signatureName: "MD MAHI UDDIN",
@@ -271,7 +271,7 @@ export const INITIAL_DOCUMENTS: Document[] = [
   {
     id: "doc-1",
     type: "OFFER_LETTER",
-    docNumber: "HSC/OF/2026/0001",
+    docNumber: "JM/OF/2026/0001",
     date: "2026-09-15",
     customerId: "cust-1",
     customerName: "Sabbir Rahman",
@@ -281,7 +281,7 @@ export const INITIAL_DOCUMENTS: Document[] = [
     customerAddress: "Konabari Industrial Area, Gazipur, Bangladesh.",
     subject: "Offer Letter for Premium Hitachi Rotary Screw Compressor Parts & Oil",
     salutation: "Dear Sir,",
-    openingParagraph: "We refer to our recent discussion regarding the spare parts requirement for your Hitachi 37kW Screw Compressor. hitachisolutioncenter is highly pleased to submit our offer letter detailing our capability to supply genuine filters and lubricant oil to keep your factory running with zero downtime.",
+    openingParagraph: "We refer to our recent discussion regarding the spare parts requirement for your Hitachi 37kW Screw Compressor. Jubayer Machineries is highly pleased to submit our offer letter detailing our capability to supply genuine filters and lubricant oil to keep your factory running with zero downtime.",
     closingParagraph: "We trust that our proposal meets your requirements. We are standing by to support your plant operations with high-quality services. Please let us know if you require any further technical assistance.",
     items: [
       {
@@ -311,14 +311,14 @@ export const INITIAL_DOCUMENTS: Document[] = [
     discount: 5000,
     total: 68500,
     status: "Active",
-    terms: "1. Delivery: Within 2-3 working days.\n2. Payment: Cash or Cheque in favor of hitachisolutioncenter upon delivery.\n3. Product: 100% Genuine brand quality parts.",
+    terms: "1. Delivery: Within 2-3 working days.\n2. Payment: Cash or Cheque in favor of Jubayer Machineries upon delivery.\n3. Product: 100% Genuine brand quality parts.",
     signatureName: "MD MAHI UDDIN",
     signatureLabel: "Managing Director"
   },
   {
     id: "doc-2",
     type: "QUOTATION",
-    docNumber: "HSC/QT/2026/0024",
+    docNumber: "JM/QT/2026/0024",
     date: "2026-09-16",
     customerId: "cust-2",
     customerName: "Mohammad Yusuf",
@@ -365,7 +365,7 @@ export const INITIAL_DOCUMENTS: Document[] = [
   {
     id: "doc-3",
     type: "INVOICE",
-    docNumber: "HSC/INV/2026/0152",
+    docNumber: "JM/INV/2026/0152",
     date: "2026-09-17",
     dueDate: "2026-10-17",
     customerId: "cust-1",
@@ -402,14 +402,14 @@ export const INITIAL_DOCUMENTS: Document[] = [
     discount: 25000,
     total: 851750,
     status: "Paid",
-    terms: "This invoice is fully paid. Thank you for choosing hitachisolutioncenter as your sustainable partner.",
+    terms: "This invoice is fully paid. Thank you for choosing Jubayer Machineries as your sustainable partner.",
     signatureName: "MD MAHI UDDIN",
     signatureLabel: "Managing Director"
   },
   {
     id: "doc-4",
     type: "BILL",
-    docNumber: "HSC/BILL/2026/0091",
+    docNumber: "JM/BILL/2026/0091",
     date: "2026-09-14",
     dueDate: "2026-09-28",
     customerId: "cust-3",
