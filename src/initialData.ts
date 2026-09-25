@@ -1,4 +1,4 @@
-import { Product, Customer, Document, BusinessSettings, StaffUser, PermissionKey } from './types';
+import { Product, Customer, Document, BusinessSettings, StaffUser, PermissionKey, FieldDispatch } from './types';
 
 export const ALL_PERMISSIONS: { key: PermissionKey; label: string; description: string; category: string }[] = [
   { key: 'view_overview', label: 'Overview Analytics', description: 'View high-level revenue and business overview stats', category: 'General' },
@@ -10,6 +10,8 @@ export const ALL_PERMISSIONS: { key: PermissionKey; label: string; description: 
   { key: 'delete_documents', label: 'Delete Documents', description: 'Permanently purge invoices or quotation records', category: 'Documents' },
   { key: 'view_due_ledger', label: 'View Due Ledger', description: 'View customer accounts receivable and due balances', category: 'Accounts' },
   { key: 'manage_due_ledger', label: 'Collect Dues / Manage Ledger', description: 'Receive customer payments and update due balances', category: 'Accounts' },
+  { key: 'view_field_dispatch', label: 'View Field Dispatches', description: 'Track staff products taken out and returned for service/sales', category: 'Dispatch' },
+  { key: 'manage_field_dispatch', label: 'Manage Field Dispatches', description: 'Create dispatch slips, reconcile returns and generate field invoices', category: 'Dispatch' },
   { key: 'view_reports', label: 'View Business Reports', description: 'Export sales, VAT, and inventory report spreadsheets', category: 'Analytics' },
   { key: 'manage_settings', label: 'Manage Showroom Settings', description: 'Configure company branding, address, and print metadata', category: 'Admin' },
   { key: 'view_staff_management', label: 'Manage Staff Sub-Accounts', description: 'Create sub-accounts and configure role access rules', category: 'Admin' },
@@ -235,35 +237,43 @@ export const INITIAL_PRODUCTS: Product[] = [
 export const INITIAL_CUSTOMERS: Customer[] = [
   {
     id: "cust-1",
+    companyId: "COMP-1001",
     name: "Sabbir Rahman",
     company: "Apex Textile Printing & Dyeing Ltd.",
     phone: "01712-456789",
     email: "sabbir@apextextile.com",
-    address: "Konabari Industrial Area, Gazipur, Bangladesh."
+    address: "Konabari Industrial Area, Gazipur, Bangladesh.",
+    createdAt: "2026-01-10"
   },
   {
     id: "cust-2",
+    companyId: "COMP-1002",
     name: "Mohammad Yusuf",
     company: "Standard Group Washing Division",
     phone: "01819-987654",
     email: "yusuf.m@standard-group.com",
-    address: "Bason Sharok, Gazipur City, Gazipur."
+    address: "Bason Sharok, Gazipur City, Gazipur.",
+    createdAt: "2026-02-01"
   },
   {
     id: "cust-3",
+    companyId: "COMP-1003",
     name: "Engr. Tanvir Ahmed",
     company: "Dhaka Auto Bricks Mills",
     phone: "01911-334455",
     email: "tanvir.engr@dhakabricks.com",
-    address: "Joydebpur Road, Gazipur."
+    address: "Joydebpur Road, Gazipur.",
+    createdAt: "2026-02-15"
   },
   {
     id: "cust-4",
+    companyId: "COMP-1004",
     name: "Kazi Monirul Islam",
     company: "Hamid Fabrics Limited",
     phone: "01552-887766",
     email: "monirul@hamidfabrics.com",
-    address: "Sreepur, Gazipur, Bangladesh."
+    address: "Sreepur, Gazipur, Bangladesh.",
+    createdAt: "2026-03-01"
   }
 ];
 
@@ -439,5 +449,66 @@ export const INITIAL_DOCUMENTS: Document[] = [
     terms: "Payment should be cleared within 14 days of bill submission.",
     signatureName: "MD MAHI UDDIN",
     signatureLabel: "Managing Director"
+  }
+];
+
+export const INITIAL_FIELD_DISPATCHES: FieldDispatch[] = [
+  {
+    id: "disp-2026-001",
+    dispatchNumber: "DISP/2026/0001",
+    staffId: "staff-sales-1",
+    staffName: "Engr. Rafiqul Islam",
+    customerId: "cust-1",
+    customerName: "Sabbir Rahman",
+    customerCompany: "Apex Textile Printing & Dyeing Ltd.",
+    customerPhone: "01712-456789",
+    purpose: "On-site Screw Compressor Maintenance & Spare Replacement",
+    dispatchDate: "2026-09-24",
+    returnDate: "2026-09-24",
+    status: "Completed",
+    notes: "2 items taken to Konabari plant. 1 item installed & invoiced, 1 item returned back to showroom stock intact.",
+    items: [
+      {
+        id: "disp-item-1",
+        productId: "prod-5",
+        productName: "Genuine Air Filter for Hitachi 22kW Compressor",
+        brand: "Hitachi",
+        unit: "Pcs",
+        issuedQty: 2,
+        soldQty: 1,
+        returnedQty: 1,
+        unitPrice: 12500,
+        totalPrice: 25000
+      }
+    ]
+  },
+  {
+    id: "disp-2026-002",
+    dispatchNumber: "DISP/2026/0002",
+    staffId: "staff-mgr-1",
+    staffName: "Kamrul Hasan",
+    customerId: "cust-2",
+    customerName: "Mohammad Yusuf",
+    customerCompany: "Standard Group Washing Division",
+    customerPhone: "01819-987654",
+    purpose: "Factory Trial Demo & Air Dryer Line Inspection",
+    dispatchDate: "2026-09-25",
+    returnDate: null,
+    status: "Pending Return",
+    notes: "3 units of Oil Separator Elements taken for trial. Pending return reconciliation.",
+    items: [
+      {
+        id: "disp-item-2",
+        productId: "prod-6",
+        productName: "Genuine Oil Separator Element AC-GA37",
+        brand: "Atlas Copco",
+        unit: "Pcs",
+        issuedQty: 3,
+        soldQty: 0,
+        returnedQty: 0,
+        unitPrice: 24000,
+        totalPrice: 72000
+      }
+    ]
   }
 ];

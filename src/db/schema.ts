@@ -27,11 +27,13 @@ export const products = pgTable('products', {
 // Customers table
 export const customers = pgTable('customers', {
   id: text('id').primaryKey(),
+  companyId: text('company_id').default(''),
   name: text('name').notNull(),
   company: text('company').default(''),
   phone: text('phone').notNull(),
   email: text('email').default(''),
   address: text('address').default(''),
+  notes: text('notes').default(''),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
@@ -114,5 +116,35 @@ export const settings = pgTable('settings', {
   terms: text('terms').default(''),
   signatureName: text('signature_name').default(''),
   signatureLabel: text('signature_label').default(''),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// Field Movement / Dispatch Challans table
+export const fieldDispatches = pgTable('field_dispatches', {
+  id: text('id').primaryKey(),
+  dispatchNumber: text('dispatch_number').notNull(),
+  staffId: text('staff_id').notNull(),
+  staffName: text('staff_name').notNull(),
+  customerId: text('customer_id').notNull(),
+  customerName: text('customer_name').notNull(),
+  customerCompany: text('customer_company').default(''),
+  customerPhone: text('customer_phone').default(''),
+  purpose: text('purpose').default(''),
+  dispatchDate: text('dispatch_date').notNull(),
+  returnDate: text('return_date'),
+  status: text('status').notNull(), // 'Pending Return' | 'Completed' | 'Cancelled'
+  notes: text('notes').default(''),
+  items: jsonb('items').$type<{
+    id: string;
+    productId: string;
+    productName: string;
+    brand: string;
+    unit: string;
+    issuedQty: number;
+    soldQty: number;
+    returnedQty: number;
+    unitPrice: number;
+    totalPrice: number;
+  }[]>().default([]),
   updatedAt: timestamp('updated_at').defaultNow(),
 });

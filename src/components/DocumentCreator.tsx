@@ -31,10 +31,12 @@ export default function DocumentCreator({
   const [dueDate, setDueDate] = useState('');
   const [status, setStatus] = useState<DocumentStatus>('Draft');
 
-  // Customer Selector/Creation
+  // Customer Selector/Creation & Unique ID Search
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  const [companyIdSearch, setCompanyIdSearch] = useState('');
   const [isAddingNewCustomer, setIsAddingNewCustomer] = useState(false);
   const [newCustomer, setNewCustomer] = useState({
+    companyId: '',
     name: '',
     company: '',
     phone: '',
@@ -194,54 +196,92 @@ export default function DocumentCreator({
   const taxAmount = Math.round((subtotal * taxRate) / 100);
   const total = Math.max(0, subtotal + taxAmount - discount);
 
-  // Quick Inline Customer Addition
+  // Quick Unique Company ID Search auto-select
+  const handleCompanyIdSearch = (input: string) => {
+    setCompanyIdSearch(input);
+    if (!input.trim()) return;
+
+    const term = input.trim().toLowerCase();
+    const matched = customers.find(c => {
+      const compId = (c.companyId || `COMP-${c.id.replace('cust-', '100')}`).toLowerCase();
+      return compId === term || 
+             compId.includes(term) || 
+             c.company.toLowerCase().includes(term) ||
+             c.name.toLowerCase().includes(term);
+    });
+
+    if (matched) {
+      setSelectedCustomerId(matched.id);
+    }
+  };
+
+  // Quick Inline Customer Addition (Fully optional inputs)
   const handleCreateCustomer = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCustomer.name || !newCustomer.phone) {
-      alert("Name and phone number are required for the customer.");
-      return;
-    }
+    const generatedCompId = newCustomer.companyId.trim() || `COMP-${1001 + customers.length}`;
+    const compName = newCustomer.company.trim() || newCustomer.name.trim() || 'General Customer / নগদ কাস্টমার';
+    const contactName = newCustomer.name.trim() || compName;
+    const contactPhone = newCustomer.phone.trim() || '01700-000000';
+
     const created: Customer = {
       id: `cust-${Date.now()}`,
-      ...newCustomer
+      companyId: generatedCompId,
+      name: contactName,
+      company: compName,
+      phone: contactPhone,
+      email: newCustomer.email.trim(),
+      address: newCustomer.address.trim() || 'Gazipur, BD'
     };
     onAddCustomer(created);
     setSelectedCustomerId(created.id);
     setIsAddingNewCustomer(false);
-    setNewCustomer({ name: '', company: '', phone: '', email: '', address: '' });
+    setNewCustomer({ companyId: '', name: '', company: '', phone: '', email: '', address: '' });
   };
 
-  // Save the full document
+  // Save the full document (Fallback defaults ensure work always completes smoothly)
   const handleSave = () => {
-    const cust = customers.find(c => c.id === selectedCustomerId);
-    if (!cust) {
-      alert("Please select a recipient / customer from the list first.");
-      return;
+    // 1. Fallback Customer if none selected
+    const cust = customers.find(c => c.id === selectedCustomerId) || {
+      id: `cust-walkin-${Date.now()}`,
+      companyId: 'COMP-WALKIN',
+      name: 'Walk-in Client / সাধারণ কাস্টমার',
+      company: 'General Sales / নগদ বিক্রয়',
+      phone: '01700-000000',
+      email: '',
+      address: 'Gazipur, Bangladesh'
+    };
+
+    // 2. Fallback Item line if table is empty
+    let validItems = items.map(it => ({
+      ...it,
+      name: it.name.trim() || 'Industrial Machinery Spare Part',
+      quantity: Math.max(1, it.quantity || 1),
+      price: Math.max(0, it.price || 0),
+      total: Math.max(1, it.quantity || 1) * Math.max(0, it.price || 0)
+    }));
+
+    if (validItems.length === 0) {
+      validItems = [{
+        id: `item-${Date.now()}`,
+        name: 'Hitachi Compressor Genuine Spare Part',
+        brand: 'Hitachi',
+        quantity: 1,
+        price: 1000,
+        total: 1000,
+        unit: 'Pcs'
+      }];
     }
 
-    if (items.length === 0) {
-      alert("Please add at least one spare part or machinery item line to the table.");
-      return;
-    }
-
-    // Double check item completeness
-    for (const item of items) {
-      if (!item.name.trim()) {
-        alert("All item lines must have a name or description.");
-        return;
-      }
-      if (item.quantity <= 0 || item.price < 0) {
-        alert("Quantity must be greater than 0, and price cannot be negative.");
-        return;
-      }
-    }
+    const calculatedSubtotal = validItems.reduce((sum, item) => sum + item.total, 0);
+    const calculatedTaxAmount = Math.round((calculatedSubtotal * taxRate) / 100);
+    const calculatedTotal = Math.max(0, calculatedSubtotal + calculatedTaxAmount - discount);
 
     const doc: Document = {
       id: editingDocument ? editingDocument.id : `doc-${Date.now()}`,
       type: docType,
-      docNumber: docNumber.trim(),
-      date,
-      dueDate: (docType === 'INVOICE' || docType === 'BILL') ? dueDate : undefined,
+      docNumber: docNumber.trim() || `JM/${docType}/2026/${Math.floor(1000 + Math.random() * 9000)}`,
+      date: date || new Date().toISOString().split('T')[0],
+      dueDate: (docType === 'INVOICE' || docType === 'BILL') ? (dueDate || date) : undefined,
       customerId: cust.id,
       customerName: cust.name,
       customerCompany: cust.company,
@@ -252,12 +292,12 @@ export default function DocumentCreator({
       salutation: (docType === 'OFFER_LETTER' || docType === 'QUOTATION') ? salutation : undefined,
       openingParagraph: (docType === 'OFFER_LETTER' || docType === 'QUOTATION') ? openingParagraph : undefined,
       closingParagraph: (docType === 'OFFER_LETTER' || docType === 'QUOTATION') ? closingParagraph : undefined,
-      items,
-      subtotal,
+      items: validItems,
+      subtotal: calculatedSubtotal,
       taxRate,
-      taxAmount,
+      taxAmount: calculatedTaxAmount,
       discount,
-      total,
+      total: calculatedTotal,
       status,
       terms,
       signatureName,
@@ -338,45 +378,80 @@ export default function DocumentCreator({
               </div>
             </div>
 
-            {/* Row 2: Customer selection & creation */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-b border-slate-100 pb-4 items-end">
-              <div className="sm:col-span-2 space-y-1.5">
-                <div className="flex justify-between">
-                  <label className="font-bold text-slate-700">Select Client / Recipient <span className="text-rose-500">*</span></label>
+            {/* Row 2: Customer selection, Unique ID Search & creation */}
+            <div className="space-y-3 border-b border-slate-100 pb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                {/* Unique ID Quick Search Input */}
+                <div className="sm:col-span-5 space-y-1">
+                  <label className="font-bold text-slate-700 block">ইউনিক আইডি লিখে খুঁজুন (Company ID Search)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. COMP-1001"
+                    value={companyIdSearch}
+                    onChange={(e) => handleCompanyIdSearch(e.target.value)}
+                    className="w-full bg-blue-50/60 border border-blue-200 focus:bg-white rounded-lg p-2.5 font-mono font-extrabold text-blue-900 focus:outline-hidden"
+                  />
                 </div>
-                <select
-                  value={selectedCustomerId}
-                  onChange={(e) => setSelectedCustomerId(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 font-semibold text-slate-800 focus:outline-hidden cursor-pointer"
-                >
-                  <option value="">-- Choose registered customer --</option>
-                  {customers.map(c => (
-                    <option key={c.id} value={c.id}>{c.company ? `${c.company} (Attn: ${c.name})` : c.name}</option>
-                  ))}
-                </select>
-              </div>
 
-              <button
-                type="button"
-                onClick={() => setIsAddingNewCustomer(!isAddingNewCustomer)}
-                className="w-full py-2.5 border border-dashed border-blue-300 hover:border-blue-900 text-blue-900 bg-blue-50/50 hover:bg-blue-50 font-bold uppercase tracking-wider rounded-lg flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
-              >
-                <UserPlus className="w-4 h-4" />
-                Add Client Inline
-              </button>
+                {/* Dropdown Customer List */}
+                <div className="sm:col-span-4 space-y-1">
+                  <label className="font-bold text-slate-700 block">কাস্টমার নির্বাচন (Select Client)</label>
+                  <select
+                    value={selectedCustomerId}
+                    onChange={(e) => setSelectedCustomerId(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 font-semibold text-slate-800 focus:outline-hidden cursor-pointer"
+                  >
+                    <option value="">&mdash; Walk-in Client / সাধারণ কাস্টমার &mdash;</option>
+                    {customers.map(c => {
+                      const compId = c.companyId || `COMP-${c.id.replace('cust-', '100')}`;
+                      return (
+                        <option key={c.id} value={c.id}>
+                          [{compId}] {c.company || c.name} ({c.name})
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                {/* Inline Add Customer Toggle */}
+                <div className="sm:col-span-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingNewCustomer(!isAddingNewCustomer)}
+                    className="w-full py-2.5 border border-dashed border-blue-300 hover:border-blue-900 text-blue-900 bg-blue-50/50 hover:bg-blue-50 font-bold uppercase tracking-wider rounded-lg flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    + নতুন কাস্টমার
+                  </button>
+                </div>
+              </div>
             </div>
 
-            {/* Quick Add Customer Subform */}
+            {/* Quick Add Customer Subform (All fields optional for zero-block completion) */}
             {isAddingNewCustomer && (
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-4 animate-slide-down">
-                <h4 className="font-bold text-slate-900 flex items-center gap-1.5">
-                  <UserPlus className="w-4 h-4 text-blue-900" />
-                  Register Customer in System
-                </h4>
+                <div className="flex justify-between items-center">
+                  <h4 className="font-bold text-slate-900 flex items-center gap-1.5">
+                    <UserPlus className="w-4 h-4 text-blue-900" />
+                    নতুন কাস্টমার নিবন্ধন (সবগুলো ঘর ঐচ্ছিক)
+                  </h4>
+                  <span className="text-[10px] text-slate-400 font-bold">You can leave any field blank</span>
+                </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-600">Company Name</label>
+                    <label className="font-bold text-slate-600">ইউনিক কোম্পানি আইডি</label>
+                    <input
+                      type="text"
+                      placeholder={`e.g. COMP-${1001 + customers.length}`}
+                      value={newCustomer.companyId}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, companyId: e.target.value })}
+                      className="w-full bg-white border border-slate-200 rounded-lg p-2 font-mono font-bold text-blue-900"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">কোম্পানির নাম (Optional)</label>
                     <input
                       type="text"
                       placeholder="e.g. Apex Textile Mills"
@@ -385,8 +460,9 @@ export default function DocumentCreator({
                       className="w-full bg-white border border-slate-200 rounded-lg p-2"
                     />
                   </div>
+
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-600">Contact Person Name <span className="text-rose-500">*</span></label>
+                    <label className="font-bold text-slate-600">কাস্টমার / ব্যক্তির নাম (Optional)</label>
                     <input
                       type="text"
                       placeholder="e.g. Sabbir Rahman"
@@ -399,7 +475,7 @@ export default function DocumentCreator({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-600">Phone Number <span className="text-rose-500">*</span></label>
+                    <label className="font-bold text-slate-600">মোবাইল ফোন (Optional)</label>
                     <input
                       type="tel"
                       placeholder="e.g. 01712-456789"
@@ -409,7 +485,7 @@ export default function DocumentCreator({
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-600">Email Address</label>
+                    <label className="font-bold text-slate-600">ইমেইল (Optional)</label>
                     <input
                       type="email"
                       placeholder="e.g. purchase@apex.com"

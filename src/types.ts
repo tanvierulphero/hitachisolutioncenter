@@ -19,11 +19,14 @@ export interface Product {
 
 export interface Customer {
   id: string;
+  companyId?: string; // e.g. COMP-1001
   name: string;
   company: string;
   phone: string;
   email: string;
   address: string;
+  createdAt?: string;
+  notes?: string;
 }
 
 export type DocumentType = 'OFFER_LETTER' | 'QUOTATION' | 'BILL' | 'INVOICE';
@@ -53,7 +56,43 @@ export type PermissionKey =
   | 'view_due_ledger'
   | 'manage_due_ledger'
   | 'view_staff_management'
-  | 'manage_settings';
+  | 'manage_settings'
+  | 'view_field_dispatch'
+  | 'manage_field_dispatch'
+  | 'view_company_profiles'
+  | 'manage_company_profiles';
+
+export interface FieldDispatchItem {
+  id: string;
+  productId: string;
+  productName: string;
+  brand: string;
+  unit: string;
+  issuedQty: number;   // Total items taken out by staff
+  soldQty: number;     // Items sold/used on site
+  returnedQty: number; // Items returned back to warehouse
+  unitPrice: number;
+  totalPrice: number;
+}
+
+export type FieldDispatchStatus = 'Pending Return' | 'Completed' | 'Cancelled';
+
+export interface FieldDispatch {
+  id: string;
+  dispatchNumber: string; // e.g. DISP/2026/0001
+  staffId: string;
+  staffName: string;
+  customerId: string;
+  customerName: string;
+  customerCompany: string;
+  customerPhone: string;
+  purpose: string; // e.g. "On-site Service & Trial Demo"
+  dispatchDate: string;
+  returnDate?: string | null;
+  status: FieldDispatchStatus;
+  notes?: string;
+  items: FieldDispatchItem[];
+}
 
 export interface StaffUser {
   id: string;
@@ -77,6 +116,8 @@ export interface DocumentItem {
   price: number;
   total: number;
   unit: string;
+  warrantyMonths?: number; // e.g. 12, 18, 24
+  warrantyExpiryDate?: string; // e.g. "2027-09-25"
 }
 
 export interface Document {

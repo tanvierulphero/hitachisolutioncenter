@@ -1,4 +1,4 @@
-import { Product, Customer, Document, StaffUser, BusinessSettings } from '../types';
+import { Product, Customer, Document, StaffUser, BusinessSettings, FieldDispatch } from '../types';
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   let response: Response;
@@ -108,6 +108,16 @@ export const apiSaveSettings = (settings: BusinessSettings): Promise<BusinessSet
     method: 'POST',
     body: JSON.stringify(settings),
   });
+
+// Field Dispatches API
+export const apiGetFieldDispatches = (): Promise<FieldDispatch[]> => fetchJson<FieldDispatch[]>('/api/field-dispatches');
+export const apiSaveFieldDispatch = (dispatch: FieldDispatch): Promise<FieldDispatch> =>
+  fetchJson<FieldDispatch>('/api/field-dispatches', {
+    method: 'POST',
+    body: JSON.stringify(dispatch),
+  });
+export const apiDeleteFieldDispatch = (id: string): Promise<{ success: boolean }> =>
+  fetchJson<{ success: boolean }>(`/api/field-dispatches/${id}`, { method: 'DELETE' });
 
 // Helper to read and compress file as compact base64 data URL (max 800px, 70% JPEG quality)
 // Prevents cPanel LiteSpeed HTTP 503 errors caused by oversized POST payloads

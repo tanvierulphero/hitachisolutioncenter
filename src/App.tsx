@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
-import { Product, Customer, Document, BusinessSettings, DocumentType, StaffUser, PermissionKey } from './types';
+import { Product, Customer, Document, BusinessSettings, DocumentType, StaffUser, PermissionKey, FieldDispatch } from './types';
 import { 
   DEFAULT_SETTINGS, 
   INITIAL_PRODUCTS, 
   INITIAL_CUSTOMERS, 
   INITIAL_DOCUMENTS,
-  INITIAL_STAFF_USERS
+  INITIAL_STAFF_USERS,
+  INITIAL_FIELD_DISPATCHES
 } from './initialData';
 
 // Component imports
@@ -20,6 +21,8 @@ import DocumentList from './components/DocumentList';
 import ReportsHub from './components/ReportsHub';
 import DueLedger from './components/DueLedger';
 import StaffManagement from './components/StaffManagement';
+import FieldDispatchManager from './components/FieldDispatchManager';
+import CompanyProfileManager from './components/CompanyProfileManager';
 
 import { 
   BarChart3, 
@@ -35,7 +38,9 @@ import {
   RotateCcw,
   Database,
   FolderLock,
-  Zap
+  Zap,
+  Truck,
+  Building2
 } from 'lucide-react';
 import { 
   apiGetProducts,
@@ -51,24 +56,28 @@ import {
   apiSaveStaff,
   apiDeleteStaff,
   apiGetSettings,
-  apiSaveSettings
+  apiSaveSettings,
+  apiGetFieldDispatches,
+  apiSaveFieldDispatch,
+  apiDeleteFieldDispatch
 } from './lib/api';
 import Logo from './components/Logo';
 
 export default function App() {
   // Authentication & Layout Views
   // "catalog" | "login" | "dashboard"
-  const [currentView, setCurrentView] = useState<'catalog' | 'login' | 'dashboard'>('catalog');
+  const [currentView, setCurrentView] = useState<'catalog' | 'login' | 'dashboard'>('dashboard');
   const [activeTab, setActiveTab] = useState<string>('overview'); // "overview", "inventory", "docs", "reports", "due_ledger", "staff_management", "settings"
 
   // Staff Sub-Accounts & Current Active User
-  const [staffUsers, setStaffUsers] = useState<StaffUser[]>([]);
-  const [currentUser, setCurrentUser] = useState<StaffUser | null>(null);
+  const [staffUsers, setStaffUsers] = useState<StaffUser[]>(INITIAL_STAFF_USERS);
+  const [currentUser, setCurrentUser] = useState<StaffUser | null>(INITIAL_STAFF_USERS[0]);
 
   // Core Database lists
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [dispatches, setDispatches] = useState<FieldDispatch[]>([]);
   const [settings, setSettings] = useState<BusinessSettings>(DEFAULT_SETTINGS);
 
   // Focus workflows
@@ -93,18 +102,21 @@ export default function App() {
     const cachedProds = localStorage.getItem('hsc_products');
     const cachedCusts = localStorage.getItem('hsc_customers');
     const cachedDocs = localStorage.getItem('hsc_documents');
+    const cachedDispatches = localStorage.getItem('hsc_dispatches');
 
     if (cachedProds) setProducts(JSON.parse(cachedProds));
     if (cachedCusts) setCustomers(JSON.parse(cachedCusts));
     if (cachedDocs) setDocuments(JSON.parse(cachedDocs));
+    if (cachedDispatches) setDispatches(JSON.parse(cachedDispatches));
 
     try {
-      const [prods, custs, docs, staff, setts] = await Promise.all([
+      const [prods, custs, docs, staff, setts, disps] = await Promise.all([
         apiGetProducts().catch(() => cachedProds ? JSON.parse(cachedProds) : INITIAL_PRODUCTS),
         apiGetCustomers().catch(() => cachedCusts ? JSON.parse(cachedCusts) : INITIAL_CUSTOMERS),
         apiGetDocuments().catch(() => cachedDocs ? JSON.parse(cachedDocs) : INITIAL_DOCUMENTS),
         apiGetStaff().catch(() => INITIAL_STAFF_USERS),
         apiGetSettings().catch(() => DEFAULT_SETTINGS),
+        apiGetFieldDispatches().catch(() => cachedDispatches ? JSON.parse(cachedDispatches) : INITIAL_FIELD_DISPATCHES)
       ]);
 
       if (prods && prods.length > 0) {
@@ -126,6 +138,13 @@ export default function App() {
         localStorage.setItem('hsc_documents', JSON.stringify(docs));
       } else if (!cachedDocs) {
         setDocuments(INITIAL_DOCUMENTS);
+      }
+
+      if (disps && disps.length > 0) {
+        setDispatches(disps);
+        localStorage.setItem('hsc_dispatches', JSON.stringify(disps));
+      } else if (!cachedDispatches) {
+        setDispatches(INITIAL_FIELD_DISPATCHES);
       }
 
       setStaffUsers(staff.length > 0 ? staff : INITIAL_STAFF_USERS);
@@ -164,6 +183,8 @@ export default function App() {
         apiGetStaff().then(setStaffUsers).catch(() => {});
       } else if (change.entity === 'settings') {
         apiGetSettings().then(s => { setSettings(s); setSettingsForm(s); }).catch(() => {});
+      } else if (change.entity === 'dispatches') {
+        apiGetFieldDispatches().then(setDispatches).catch(() => {});
       }
     });
 
@@ -357,6 +378,71 @@ export default function App() {
     }
   };
 
+  // HANDLERS FOR FIELD DISPATCHES
+  const handleSaveDispatch = async (dispatch: FieldDispatch) => {
+    let list = [...dispatches];
+    const existingIndex = dispatches.findIndex(d => d.id === dispatch.id);
+    if (existingIndex >= 0) {
+      list[existingIndex] = dispatch;
+    } else {
+      list = [dispatch, ...dispatches];
+    }
+    setDispatches(list);
+    localStorage.setItem('hsc_dispatches', JSON.stringify(list));
+
+    // Update showroom inventory stock levels
+    if (existingIndex < 0) {
+      // NEW DISPATCH: Deduct issued quantities from available stock
+      const updatedProducts = products.map(prod => {
+        const item = dispatch.items.find(it => it.productId === prod.id);
+        if (item) {
+          const updatedProd = {
+            ...prod,
+            stock: Math.max(0, prod.stock - item.issuedQty)
+          };
+          apiSaveProduct(updatedProd).catch(() => {});
+          return updatedProd;
+        }
+        return prod;
+      });
+      setProducts(updatedProducts);
+      localStorage.setItem('hsc_products', JSON.stringify(updatedProducts));
+    } else if (dispatch.status === 'Completed') {
+      // RECONCILED: Return returnedQty back to available stock
+      const updatedProducts = products.map(prod => {
+        const item = dispatch.items.find(it => it.productId === prod.id);
+        if (item && item.returnedQty > 0) {
+          const updatedProd = {
+            ...prod,
+            stock: prod.stock + item.returnedQty
+          };
+          apiSaveProduct(updatedProd).catch(() => {});
+          return updatedProd;
+        }
+        return prod;
+      });
+      setProducts(updatedProducts);
+      localStorage.setItem('hsc_products', JSON.stringify(updatedProducts));
+    }
+
+    try {
+      await apiSaveFieldDispatch(dispatch);
+    } catch (e) {
+      console.warn('Backend sync warning for dispatch:', e);
+    }
+  };
+
+  const handleDeleteDispatch = async (id: string) => {
+    const list = dispatches.filter(d => d.id !== id);
+    setDispatches(list);
+    localStorage.setItem('hsc_dispatches', JSON.stringify(list));
+    try {
+      await apiDeleteFieldDispatch(id);
+    } catch (e) {
+      console.error('Failed to delete dispatch:', e);
+    }
+  };
+
   // HANDLER FOR SETTINGS SAVE
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -398,7 +484,13 @@ export default function App() {
       {currentView === 'catalog' && (
         <PublicCatalog 
           products={products}
-          onAdminClick={() => setCurrentView('login')}
+          onAdminClick={() => {
+            if (currentUser) {
+              setCurrentView('dashboard');
+            } else {
+              setCurrentView('login');
+            }
+          }}
         />
       )}
 
@@ -510,6 +602,36 @@ export default function App() {
                   >
                     <FileText className="w-4 h-4 text-rose-400" />
                     Due Ledger
+                  </button>
+                )}
+
+                {/* Tab: Field Dispatches */}
+                {hasPermission('view_field_dispatch') && (
+                  <button
+                    onClick={() => { setActiveTab('dispatch'); setEditingDocument(null); setIsCreatingDoc(null); }}
+                    className={`w-full flex items-center gap-2.5 px-3.5 py-3 rounded-lg transition-all text-left cursor-pointer ${
+                      activeTab === 'dispatch'
+                        ? 'bg-blue-600 text-white font-extrabold shadow-sm'
+                        : 'hover:bg-slate-800 hover:text-slate-100'
+                    }`}
+                  >
+                    <Truck className="w-4 h-4 text-amber-400" />
+                    Field Dispatches / চালান
+                  </button>
+                )}
+
+                {/* Tab: Company Profiles */}
+                {hasPermission('view_company_profiles') && (
+                  <button
+                    onClick={() => { setActiveTab('company_profiles'); setEditingDocument(null); setIsCreatingDoc(null); }}
+                    className={`w-full flex items-center gap-2.5 px-3.5 py-3 rounded-lg transition-all text-left cursor-pointer ${
+                      activeTab === 'company_profiles'
+                        ? 'bg-blue-600 text-white font-extrabold shadow-sm'
+                        : 'hover:bg-slate-800 hover:text-slate-100'
+                    }`}
+                  >
+                    <Building2 className="w-4 h-4 text-teal-400" />
+                    Company Profiles / আইডি
                   </button>
                 )}
 
@@ -635,9 +757,12 @@ export default function App() {
                   {activeTab === 'inventory' && hasPermission('view_inventory') && (
                     <InventoryManager 
                       products={products}
+                      documents={documents}
+                      dispatches={dispatches}
                       onAddProduct={handleAddProduct}
                       onUpdateProduct={handleUpdateProduct}
                       onDeleteProduct={handleDeleteProduct}
+                      onViewDocument={(doc) => setViewingDocument(doc)}
                     />
                   )}
 
@@ -667,6 +792,32 @@ export default function App() {
                       documents={documents}
                       customers={customers}
                       onUpdateDocument={handleSaveDocument}
+                      onViewDocument={(doc) => setViewingDocument(doc)}
+                    />
+                  )}
+
+                  {/* TAB PANEL 4d: Field Dispatches Movement Hub */}
+                  {activeTab === 'dispatch' && hasPermission('view_field_dispatch') && (
+                    <FieldDispatchManager 
+                      dispatches={dispatches}
+                      products={products}
+                      customers={customers}
+                      staffUsers={staffUsers}
+                      settings={settings}
+                      onSaveDispatch={handleSaveDispatch}
+                      onDeleteDispatch={handleDeleteDispatch}
+                      onCreateInvoiceFromDispatch={handleSaveDocument}
+                    />
+                  )}
+
+                  {/* TAB PANEL 4e: Company Profiles & Unique ID Directory */}
+                  {activeTab === 'company_profiles' && hasPermission('view_company_profiles') && (
+                    <CompanyProfileManager 
+                      customers={customers}
+                      documents={documents}
+                      dispatches={dispatches}
+                      products={products}
+                      onSaveCustomer={handleAddCustomer}
                       onViewDocument={(doc) => setViewingDocument(doc)}
                     />
                   )}

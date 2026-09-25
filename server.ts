@@ -5,9 +5,9 @@ import path from 'path';
 import multer from 'multer';
 import { Server as SocketIOServer } from 'socket.io';
 import { db } from './src/db/index.ts';
-import { products, customers, documents, staffUsers, settings } from './src/db/schema.ts';
+import { products, customers, documents, staffUsers, settings, fieldDispatches } from './src/db/schema.ts';
 import { eq } from 'drizzle-orm';
-import { INITIAL_PRODUCTS, INITIAL_CUSTOMERS, INITIAL_DOCUMENTS, INITIAL_STAFF_USERS, DEFAULT_SETTINGS } from './src/initialData.ts';
+import { INITIAL_PRODUCTS, INITIAL_CUSTOMERS, INITIAL_DOCUMENTS, INITIAL_STAFF_USERS, DEFAULT_SETTINGS, INITIAL_FIELD_DISPATCHES } from './src/initialData.ts';
 
 const app = express();
 const port = 3000;
@@ -65,9 +65,44 @@ io.on('connection', (socket) => {
   console.log('Real-time SQL client connected:', socket.id);
 });
 
+// Ensure PostgreSQL table extensions and columns exist
+async function initDbMigrations() {
+  try {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS field_dispatches (
+        id text PRIMARY KEY NOT NULL,
+        dispatch_number text NOT NULL,
+        staff_id text NOT NULL,
+        staff_name text NOT NULL,
+        customer_id text NOT NULL,
+        customer_name text NOT NULL,
+        customer_company text DEFAULT '',
+        customer_phone text DEFAULT '',
+        purpose text DEFAULT '',
+        dispatch_date text NOT NULL,
+        return_date text,
+        status text NOT NULL,
+        notes text DEFAULT '',
+        items jsonb DEFAULT '[]'::jsonb,
+        updated_at timestamp DEFAULT now()
+      );
+    `).catch(() => {});
+
+    await db.execute(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS company_id text DEFAULT '';`).catch(() => {});
+    await db.execute(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS notes text DEFAULT '';`).catch(() => {});
+  } catch (err) {
+    console.error('DB Migration notice:', err);
+  }
+}
+
+// Run DB migrations immediately on startup
+initDbMigrations();
+
 // Seed initial data if tables are empty
 async function seedInitialDataIfNeeded() {
   try {
+    await initDbMigrations();
+
     const existingProducts = await db.select().from(products).limit(1);
     if (existingProducts.length === 0) {
       console.log('Seeding initial products into Cloud SQL...');
@@ -107,6 +142,14 @@ async function seedInitialDataIfNeeded() {
         id: 'global_settings',
         ...DEFAULT_SETTINGS,
       }).onConflictDoNothing();
+    }
+
+    const existingDispatches = await db.select().from(fieldDispatches).limit(1);
+    if (existingDispatches.length === 0) {
+      console.log('Seeding initial field dispatches into Cloud SQL...');
+      for (const fd of INITIAL_FIELD_DISPATCHES) {
+        await db.insert(fieldDispatches).values(fd).onConflictDoNothing();
+      }
     }
   } catch (err) {
     console.error('Data seeding check encountered non-fatal error:', err);
@@ -188,11 +231,13 @@ app.post('/api/customers', async (req, res) => {
     await db.insert(customers).values(item).onConflictDoUpdate({
       target: customers.id,
       set: {
+        companyId: item.companyId || '',
         name: item.name,
         company: item.company || '',
         phone: item.phone,
         email: item.email || '',
         address: item.address || '',
+        notes: item.notes || '',
       },
     });
     notifyChange('customers', 'save', item);
@@ -384,6 +429,62 @@ app.post('/api/settings', async (req, res) => {
   } catch (err: any) {
     console.error('Failed to save settings:', err);
     res.status(500).json({ error: err.message || 'Failed to save settings' });
+  }
+});
+
+// 6. Field Dispatches (Movement & Returns)
+app.get('/api/field-dispatches', async (_req, res) => {
+  try {
+    await seedInitialDataIfNeeded();
+    const result = await db.select().from(fieldDispatches);
+    res.json(result);
+  } catch (err: any) {
+    console.error('Failed to fetch field dispatches:', err);
+    res.status(500).json({ error: err.message || 'Failed to fetch field dispatches' });
+  }
+});
+
+app.post('/api/field-dispatches', async (req, res) => {
+  try {
+    const item = req.body;
+    if (!item.id) {
+      return res.status(400).json({ error: 'Missing field dispatch ID' });
+    }
+    await db.insert(fieldDispatches).values(item).onConflictDoUpdate({
+      target: fieldDispatches.id,
+      set: {
+        dispatchNumber: item.dispatchNumber,
+        staffId: item.staffId,
+        staffName: item.staffName,
+        customerId: item.customerId,
+        customerName: item.customerName,
+        customerCompany: item.customerCompany || '',
+        customerPhone: item.customerPhone || '',
+        purpose: item.purpose || '',
+        dispatchDate: item.dispatchDate,
+        returnDate: item.returnDate || null,
+        status: item.status,
+        notes: item.notes || '',
+        items: item.items || [],
+      },
+    });
+    notifyChange('dispatches', 'save', item);
+    res.json(item);
+  } catch (err: any) {
+    console.error('Failed to save field dispatch:', err);
+    res.status(500).json({ error: err.message || 'Failed to save field dispatch' });
+  }
+});
+
+app.delete('/api/field-dispatches/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.delete(fieldDispatches).where(eq(fieldDispatches.id, id));
+    notifyChange('dispatches', 'delete', { id });
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('Failed to delete field dispatch:', err);
+    res.status(500).json({ error: err.message || 'Failed to delete field dispatch' });
   }
 });
 
