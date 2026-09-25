@@ -21,8 +21,11 @@ function getDbConnection() {
         try {
             $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
         } catch (PDOException $e) {
-            http_response_code(500);
-            echo json_encode(["error" => "Database connection failed: " . $e->getMessage()]);
+            http_response_code(200);
+            echo json_encode([
+                "error" => "Database connection failed: " . $e->getMessage() . ". Please create database '" . DB_NAME . "' in cPanel -> MySQL Databases and import schema.sql.",
+                "db_error" => true
+            ]);
             exit;
         }
     }

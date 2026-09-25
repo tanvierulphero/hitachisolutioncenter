@@ -40,16 +40,25 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   }
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: response.statusText }));
+    const errorData = await response.json().catch(() => ({ error: '' }));
     
     if (response.status === 404) {
-      throw new Error(`HTTP 404 Not Found: 'api' folder or '.htaccess' is missing in cPanel public_html. Please upload the full contents of your 'dist' folder to public_html.`);
+      throw new Error(`HTTP 404 Not Found: 'api' folder or '.htaccess' is missing in cPanel public_html.`);
     }
 
-    throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    if (response.status === 503) {
+      throw new Error(`cPanel MySQL Server Unreachable (HTTP 503). Please create database 'localmar_247' in cPanel MySQL Databases.`);
+    }
+
+    throw new Error(errorData.error || `Server Response Error (HTTP ${response.status})`);
   }
 
-  return response.json();
+  const data = await response.json();
+  if (data && data.db_error) {
+    throw new Error(data.error || 'MySQL Database Connection Error');
+  }
+
+  return data;
 }
 
 // Products API
