@@ -140,4 +140,25 @@ CREATE TABLE `settings` (
 INSERT INTO `settings` (`id`, `name`, `slogan`, `address`, `phone1`, `phone2`, `email`, `website`, `invoice_prefix`, `quote_prefix`, `offer_prefix`, `bill_prefix`, `tax_rate`, `terms`, `signature_name`, `signature_label`) VALUES
 ('global_settings', 'hitachisolutioncenter', 'Your Problem Solution is Sustainable Partner', 'Hazi Siddik Complex, Molla Market, Bason Sharok, Gazipur City.', '01715-994956', '01799-498199', 'info@hitachisolutioncenter.com', 'www.hitachiairsolutioncenter.com', 'HSC/INV/2026/', 'HSC/QT/2026/', 'HSC/OF/2026/', 'HSC/BILL/2026/', 5, '1. Delivery: Within 7 working days upon receipt of work order.\n2. Payment: 50% advance with work order & 50% upon delivery.\n3. Warranty: 1 Year comprehensive brand warranty.', 'MD MAHI UDDIN', 'Managing Director');
 
+-- 6. Table: field_dispatches
+DROP TABLE IF EXISTS `field_dispatches`;
+CREATE TABLE `field_dispatches` (
+  `id` VARCHAR(128) NOT NULL,
+  `dispatch_number` VARCHAR(100) NOT NULL,
+  `staff_id` VARCHAR(128) NOT NULL,
+  `staff_name` VARCHAR(255) NOT NULL,
+  `customer_id` VARCHAR(128) NOT NULL,
+  `customer_name` VARCHAR(255) NOT NULL,
+  `customer_company` VARCHAR(255) DEFAULT '',
+  `customer_phone` VARCHAR(100) DEFAULT '',
+  `purpose` TEXT,
+  `dispatch_date` VARCHAR(50) NOT NULL,
+  `return_date` VARCHAR(50) DEFAULT NULL,
+  `status` VARCHAR(50) NOT NULL,
+  `notes` TEXT,
+  `items` LONGTEXT,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;

@@ -222,6 +222,13 @@ export async function apiUploadImage(file: File): Promise<{ url: string }> {
   }
 }
 
+export function isCpanelDeployment(): boolean {
+  if (typeof window !== 'undefined') {
+    return window.location.hostname !== 'localhost' && !window.location.hostname.includes('run.app');
+  }
+  return false;
+}
+
 export interface DbHealthResult {
   status: 'ok' | 'error';
   database: string;
@@ -240,13 +247,31 @@ export interface DbHealthResult {
 }
 
 export async function apiCheckDatabaseHealth(): Promise<DbHealthResult> {
-  const isCpanel = isCpanelDeployment();
-  const endpoint = isCpanel ? '/api/index.php?endpoint=health' : '/api/health';
-
+  // 1. First try /api/health (Node server / Cloud SQL)
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
-    const response = await fetch(endpoint, {
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const response = await fetch('/api/health', {
+      signal: controller.signal,
+      headers: { 'Cache-Control': 'no-cache' },
+    });
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data && (data.status === 'ok' || data.connected)) {
+        return data;
+      }
+    }
+  } catch {
+    // Continue to cPanel endpoint
+  }
+
+  // 2. Try cPanel PHP API endpoint (/api/index.php?endpoint=health)
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const response = await fetch('/api/index.php?endpoint=health', {
       signal: controller.signal,
       headers: { 'Cache-Control': 'no-cache' },
     });
@@ -258,26 +283,17 @@ export async function apiCheckDatabaseHealth(): Promise<DbHealthResult> {
     const errData = await response.json().catch(() => ({}));
     return {
       status: 'error',
-      database: isCpanel ? 'MySQL (cPanel)' : 'PostgreSQL (Cloud SQL)',
+      database: 'MySQL / MariaDB (cPanel)',
       connected: false,
       error: errData.error || `HTTP ${response.status} ${response.statusText}`,
       timestamp: new Date().toISOString(),
     };
   } catch (err: any) {
-    // Try fallback endpoint
-    if (!isCpanel) {
-      try {
-        const fallbackRes = await fetch('/api/index.php?endpoint=health');
-        if (fallbackRes.ok) return await fallbackRes.json();
-      } catch {
-        // Fallback failed
-      }
-    }
     return {
       status: 'error',
-      database: isCpanel ? 'MySQL (cPanel)' : 'PostgreSQL (Cloud SQL)',
+      database: 'SQL Database',
       connected: false,
-      error: err.name === 'AbortError' ? 'Connection timed out' : (err.message || 'Network error'),
+      error: err.name === 'AbortError' ? 'Connection timed out' : (err.message || 'Database server unreachable'),
       timestamp: new Date().toISOString(),
     };
   }
