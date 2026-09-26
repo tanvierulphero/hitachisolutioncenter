@@ -82,161 +82,83 @@ io.on('connection', (socket) => {
   console.log('Real-time SQL client connected:', socket.id);
 });
 
-// Ensure PostgreSQL table extensions and columns exist
-let isMigrated = false;
-async function initDbMigrations() {
-  if (isMigrated) return;
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS field_dispatches (
-        id text PRIMARY KEY NOT NULL,
-        dispatch_number text NOT NULL,
-        staff_id text NOT NULL,
-        staff_name text NOT NULL,
-        customer_id text NOT NULL,
-        customer_name text NOT NULL,
-        customer_company text DEFAULT '',
-        customer_phone text DEFAULT '',
-        purpose text DEFAULT '',
-        dispatch_date text NOT NULL,
-        return_date text,
-        status text NOT NULL,
-        notes text DEFAULT '',
-        items jsonb DEFAULT '[]'::jsonb,
-        updated_at timestamp DEFAULT now()
-      );
-    `);
-
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS suppliers (
-        id text PRIMARY KEY NOT NULL,
-        supplier_id text DEFAULT '',
-        name text NOT NULL,
-        company text DEFAULT '',
-        phone text NOT NULL,
-        email text DEFAULT '',
-        address text DEFAULT '',
-        contact_person text DEFAULT '',
-        notes text DEFAULT '',
-        created_at text DEFAULT '',
-        updated_at timestamp DEFAULT now()
-      );
-    `);
-
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS purchases (
-        id text PRIMARY KEY NOT NULL,
-        purchase_number text NOT NULL,
-        supplier_invoice_no text DEFAULT '',
-        supplier_id text NOT NULL,
-        supplier_name text NOT NULL,
-        supplier_company text DEFAULT '',
-        supplier_phone text DEFAULT '',
-        supplier_email text DEFAULT '',
-        supplier_address text DEFAULT '',
-        purchase_date text NOT NULL,
-        items jsonb DEFAULT '[]'::jsonb,
-        subtotal real NOT NULL DEFAULT 0,
-        tax_rate real DEFAULT 0,
-        tax_amount real DEFAULT 0,
-        discount real DEFAULT 0,
-        shipping_cost real DEFAULT 0,
-        grand_total real NOT NULL DEFAULT 0,
-        paid_amount real DEFAULT 0,
-        due_amount real DEFAULT 0,
-        payment_status text NOT NULL,
-        payment_method text NOT NULL,
-        status text NOT NULL,
-        notes text DEFAULT '',
-        created_at text DEFAULT '',
-        updated_at timestamp DEFAULT now()
-      );
-    `);
-
-    await pool.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS company_id text DEFAULT '';`).catch(() => {});
-    await pool.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS notes text DEFAULT '';`).catch(() => {});
-    isMigrated = true;
-  } catch (err) {
-    console.error('DB Migration notice:', err);
-  }
-}
-
-// Run DB migrations immediately on startup
-initDbMigrations();
-
 // Seed initial data if tables are empty
+let isSeeded = false;
 async function seedInitialDataIfNeeded() {
+  if (isSeeded) return;
   try {
-    await initDbMigrations();
-
-    const existingProducts = await db.select().from(products).limit(1);
+    const existingProducts = await db.select().from(products).limit(1).catch(() => []);
     if (existingProducts.length === 0) {
       console.log('Seeding initial products into Cloud SQL...');
       for (const p of INITIAL_PRODUCTS) {
-        await db.insert(products).values(p).onConflictDoNothing();
+        await db.insert(products).values(p).onConflictDoNothing().catch(() => {});
       }
     }
 
-    const existingCustomers = await db.select().from(customers).limit(1);
+    const existingCustomers = await db.select().from(customers).limit(1).catch(() => []);
     if (existingCustomers.length === 0) {
       console.log('Seeding initial customers into Cloud SQL...');
       for (const c of INITIAL_CUSTOMERS) {
-        await db.insert(customers).values(c).onConflictDoNothing();
+        await db.insert(customers).values(c).onConflictDoNothing().catch(() => {});
       }
     }
 
-    const existingSuppliers = await db.select().from(suppliers).limit(1);
+    const existingSuppliers = await db.select().from(suppliers).limit(1).catch(() => []);
     if (existingSuppliers.length === 0) {
       console.log('Seeding initial suppliers into Cloud SQL...');
       for (const s of INITIAL_SUPPLIERS) {
-        await db.insert(suppliers).values(s).onConflictDoNothing();
+        await db.insert(suppliers).values(s).onConflictDoNothing().catch(() => {});
       }
     }
 
-    const existingPurchases = await db.select().from(purchases).limit(1);
+    const existingPurchases = await db.select().from(purchases).limit(1).catch(() => []);
     if (existingPurchases.length === 0) {
       console.log('Seeding initial purchases into Cloud SQL...');
       for (const p of INITIAL_PURCHASES) {
-        await db.insert(purchases).values(p).onConflictDoNothing();
+        await db.insert(purchases).values(p).onConflictDoNothing().catch(() => {});
       }
     }
 
-    const existingDocs = await db.select().from(documents).limit(1);
+    const existingDocs = await db.select().from(documents).limit(1).catch(() => []);
     if (existingDocs.length === 0) {
       console.log('Seeding initial documents into Cloud SQL...');
       for (const d of INITIAL_DOCUMENTS) {
-        await db.insert(documents).values(d).onConflictDoNothing();
+        await db.insert(documents).values(d).onConflictDoNothing().catch(() => {});
       }
     }
 
-    const existingStaff = await db.select().from(staffUsers).limit(1);
+    const existingStaff = await db.select().from(staffUsers).limit(1).catch(() => []);
     if (existingStaff.length === 0) {
       console.log('Seeding initial staff users into Cloud SQL...');
       for (const s of INITIAL_STAFF_USERS) {
-        await db.insert(staffUsers).values(s).onConflictDoNothing();
+        await db.insert(staffUsers).values(s).onConflictDoNothing().catch(() => {});
       }
     }
 
-    const existingSettings = await db.select().from(settings).limit(1);
+    const existingSettings = await db.select().from(settings).limit(1).catch(() => []);
     if (existingSettings.length === 0) {
       console.log('Seeding initial settings into Cloud SQL...');
       await db.insert(settings).values({
         id: 'global_settings',
         ...DEFAULT_SETTINGS,
-      }).onConflictDoNothing();
+      }).onConflictDoNothing().catch(() => {});
     }
 
-    const existingDispatches = await db.select().from(fieldDispatches).limit(1);
+    const existingDispatches = await db.select().from(fieldDispatches).limit(1).catch(() => []);
     if (existingDispatches.length === 0) {
       console.log('Seeding initial field dispatches into Cloud SQL...');
       for (const fd of INITIAL_FIELD_DISPATCHES) {
-        await db.insert(fieldDispatches).values(fd).onConflictDoNothing();
+        await db.insert(fieldDispatches).values(fd).onConflictDoNothing().catch(() => {});
       }
     }
+    isSeeded = true;
   } catch (err) {
-    console.error('Data seeding check encountered non-fatal error:', err);
+    console.error('Data seeding check encountered notice:', err);
   }
 }
+
+// Initial seed trigger
+seedInitialDataIfNeeded().catch(() => {});
 
 // REST API Routes
 // 1. Products

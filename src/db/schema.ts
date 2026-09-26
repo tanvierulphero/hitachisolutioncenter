@@ -2,7 +2,7 @@ import { pgTable, text, real, integer, jsonb, timestamp } from 'drizzle-orm/pg-c
 
 // Users table for database user tracking
 export const users = pgTable('users', {
-  id: text('id').primaryKey(),
+  id: text('id').primaryKey().notNull(),
   uid: text('uid').unique(),
   email: text('email').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
@@ -10,7 +10,7 @@ export const users = pgTable('users', {
 
 // Products / Inventory table
 export const products = pgTable('products', {
-  id: text('id').primaryKey(),
+  id: text('id').primaryKey().notNull(),
   name: text('name').notNull(),
   sku: text('sku').notNull(),
   category: text('category').notNull(),
@@ -26,7 +26,7 @@ export const products = pgTable('products', {
 
 // Customers table
 export const customers = pgTable('customers', {
-  id: text('id').primaryKey(),
+  id: text('id').primaryKey().notNull(),
   companyId: text('company_id').default(''),
   name: text('name').notNull(),
   company: text('company').default(''),
@@ -39,7 +39,7 @@ export const customers = pgTable('customers', {
 
 // Documents table (Invoices, Quotations, Offer Letters, Bills)
 export const documents = pgTable('documents', {
-  id: text('id').primaryKey(),
+  id: text('id').primaryKey().notNull(),
   type: text('type').notNull(), // OFFER_LETTER, QUOTATION, BILL, INVOICE
   docNumber: text('doc_number').notNull(),
   date: text('date').notNull(),
@@ -85,7 +85,7 @@ export const documents = pgTable('documents', {
 
 // Staff Users table
 export const staffUsers = pgTable('staff_users', {
-  id: text('id').primaryKey(),
+  id: text('id').primaryKey().notNull(),
   name: text('name').notNull(),
   email: text('email').notNull(),
   phone: text('phone').default(''),
@@ -100,7 +100,7 @@ export const staffUsers = pgTable('staff_users', {
 
 // Business Settings table
 export const settings = pgTable('settings', {
-  id: text('id').primaryKey(), // 'global_settings'
+  id: text('id').primaryKey().notNull(), // 'global_settings'
   name: text('name').notNull(),
   slogan: text('slogan').default(''),
   address: text('address').default(''),
@@ -121,7 +121,7 @@ export const settings = pgTable('settings', {
 
 // Field Movement / Dispatch Challans table
 export const fieldDispatches = pgTable('field_dispatches', {
-  id: text('id').primaryKey(),
+  id: text('id').primaryKey().notNull(),
   dispatchNumber: text('dispatch_number').notNull(),
   staffId: text('staff_id').notNull(),
   staffName: text('staff_name').notNull(),
@@ -151,7 +151,7 @@ export const fieldDispatches = pgTable('field_dispatches', {
 
 // Suppliers / Vendors table
 export const suppliers = pgTable('suppliers', {
-  id: text('id').primaryKey(),
+  id: text('id').primaryKey().notNull(),
   supplierId: text('supplier_id').default(''),
   name: text('name').notNull(),
   company: text('company').default(''),
@@ -166,7 +166,7 @@ export const suppliers = pgTable('suppliers', {
 
 // Purchases / Stock Inward table
 export const purchases = pgTable('purchases', {
-  id: text('id').primaryKey(),
+  id: text('id').primaryKey().notNull(),
   purchaseNumber: text('purchase_number').notNull(),
   supplierInvoiceNo: text('supplier_invoice_no').default(''),
   supplierId: text('supplier_id').notNull(),
