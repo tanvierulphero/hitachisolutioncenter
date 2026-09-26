@@ -1,7 +1,8 @@
 <?php
 // ========================================================
-// cPanel Image Upload Handler for Hitachi Solution Center
+// cPanel Image Upload Handler with SQL Audit Tracking
 // Saves uploaded product images into the /uploads directory
+// and logs details in uploaded_files & activity_logs table
 // ========================================================
 
 header('Access-Control-Allow-Origin: *');
@@ -20,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-// Ensure uploads folder exists in parent or current directory
+// Ensure uploads folder exists
 $possibleUploadDirs = [
     __DIR__ . '/../uploads/',
     __DIR__ . '/uploads/',
@@ -43,6 +44,46 @@ if (!$uploadDir) {
     @mkdir($uploadDir, 0755, true);
 }
 
+// Optional DB Logging Helper
+function logUploadToDatabase($fileId, $fileName, $originalName, $fileUrl, $fileSize, $mimeType) {
+    try {
+        if (file_exists(__DIR__ . '/config.php')) {
+            require_once __DIR__ . '/config.php';
+            $pdo = getDbConnection();
+            if ($pdo) {
+                $clientIp = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+                $stmt = $pdo->prepare("
+                    INSERT INTO uploaded_files (id, file_name, original_name, file_url, file_size, mime_type, entity_type, ip_address)
+                    VALUES (:id, :file_name, :original_name, :file_url, :file_size, :mime_type, 'product', :ip_address)
+                ");
+                $stmt->execute([
+                    ':id' => $fileId,
+                    ':file_name' => $fileName,
+                    ':original_name' => $originalName,
+                    ':file_url' => $fileUrl,
+                    ':file_size' => $fileSize,
+                    ':mime_type' => $mimeType,
+                    ':ip_address' => $clientIp
+                ]);
+
+                // Also log to activity_logs
+                $actStmt = $pdo->prepare("
+                    INSERT INTO activity_logs (id, staff_name, action, module, description, entity_id, ip_address)
+                    VALUES (:id, 'Staff / System', 'UPLOAD_IMAGE', 'INVENTORY', :description, :entity_id, :ip_address)
+                ");
+                $actStmt->execute([
+                    ':id' => 'act_' . time() . '_' . substr(md5(uniqid()), 0, 6),
+                    ':description' => "Uploaded image file: " . $originalName . " (" . round($fileSize / 1024, 1) . " KB)",
+                    ':entity_id' => $fileId,
+                    ':ip_address' => $clientIp
+                ]);
+            }
+        }
+    } catch (Exception $e) {
+        // Non-fatal, file is still saved on disk
+    }
+}
+
 // Handle File Upload from FormData
 if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
     $fileTmpPath = $_FILES['file']['tmp_name'];
@@ -60,22 +101,23 @@ if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
         exit;
     }
 
-    // Limit size to 10MB
-    if ($fileSize > 10 * 1024 * 1024) {
+    // Limit size to 25MB
+    if ($fileSize > 25 * 1024 * 1024) {
         http_response_code(400);
-        echo json_encode(['error' => 'File size exceeds 10MB limit']);
+        echo json_encode(['error' => 'File size exceeds 25MB limit']);
         exit;
     }
 
     // Generate unique name
+    $fileId = 'file_' . time() . '_' . substr(md5(uniqid()), 0, 8);
     $newFileName = 'prod_' . time() . '_' . substr(md5(uniqid()), 0, 8) . '.' . $fileExtension;
     $destPath = $uploadDir . $newFileName;
 
     if (move_uploaded_file($fileTmpPath, $destPath)) {
         @chmod($destPath, 0644);
-        // Return relative path accessible via web browser
         $fileUrl = '/uploads/' . $newFileName;
-        echo json_encode(['url' => $fileUrl, 'success' => true]);
+        logUploadToDatabase($fileId, $newFileName, $fileName, $fileUrl, $fileSize, $fileType);
+        echo json_encode(['url' => $fileUrl, 'success' => true, 'id' => $fileId]);
         exit;
     } else {
         http_response_code(500);
@@ -90,7 +132,7 @@ if (isset($inputData['base64'])) {
     $base64Data = $inputData['base64'];
     if (preg_match('/^data:image\/(\w+);base64,/', $base64Data, $type)) {
         $base64Data = substr($base64Data, strpos($base64Data, ',') + 1);
-        $type = strtolower($type[1]); // jpg, png, etc.
+        $type = strtolower($type[1]);
 
         if (!in_array($type, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'])) {
             $type = 'png';
@@ -103,12 +145,14 @@ if (isset($inputData['base64'])) {
             exit;
         }
 
+        $fileId = 'file_' . time() . '_' . substr(md5(uniqid()), 0, 8);
         $newFileName = 'prod_' . time() . '_' . substr(md5(uniqid()), 0, 8) . '.' . $type;
         $destPath = $uploadDir . $newFileName;
 
         if (file_put_contents($destPath, $base64Data)) {
             $fileUrl = '/uploads/' . $newFileName;
-            echo json_encode(['url' => $fileUrl, 'success' => true]);
+            logUploadToDatabase($fileId, $newFileName, 'base64_upload.' . $type, $fileUrl, strlen($base64Data), 'image/' . $type);
+            echo json_encode(['url' => $fileUrl, 'success' => true, 'id' => $fileId]);
             exit;
         }
     }

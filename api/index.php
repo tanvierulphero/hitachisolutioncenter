@@ -655,7 +655,58 @@ try {
             break;
 
         // ----------------------------------------------------
-        // 10. DATABASE & SERVER HEALTH CHECK
+        // 10. ACTIVITY LOGS / CLICK & AUDIT TRAIL API
+        // ----------------------------------------------------
+        case 'activity_logs':
+        case 'logs':
+            if ($method === 'GET') {
+                $limit = isset($_GET['limit']) ? min((int)$_GET['limit'], 200) : 100;
+                $stmt = $pdo->prepare("SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT :lim");
+                $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+                $stmt->execute();
+                $rows = $stmt->fetchAll();
+                foreach ($rows as &$r) {
+                    $r['payload'] = json_decode($r['payload'] ?? '{}', true);
+                }
+                echo json_encode($rows);
+            } elseif ($method === 'POST') {
+                $logId = $inputData['id'] ?? ('log_' . time() . '_' . substr(md5(uniqid()), 0, 6));
+                $stmt = $pdo->prepare("
+                    INSERT INTO activity_logs (id, staff_id, staff_name, action, module, description, entity_id, payload, ip_address, user_agent)
+                    VALUES (:id, :staff_id, :staff_name, :action, :module, :description, :entity_id, :payload, :ip_address, :user_agent)
+                ");
+                $clientIp = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+                $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+                $stmt->execute([
+                    ':id' => $logId,
+                    ':staff_id' => $inputData['staff_id'] ?? $inputData['staffId'] ?? null,
+                    ':staff_name' => $inputData['staff_name'] ?? $inputData['staffName'] ?? 'System / Guest',
+                    ':action' => $inputData['action'] ?? 'CLICK',
+                    ':module' => $inputData['module'] ?? 'SYSTEM',
+                    ':description' => $inputData['description'] ?? 'User action recorded',
+                    ':entity_id' => $inputData['entity_id'] ?? $inputData['entityId'] ?? null,
+                    ':payload' => json_encode($inputData['payload'] ?? []),
+                    ':ip_address' => $clientIp,
+                    ':user_agent' => $userAgent
+                ]);
+                echo json_encode(['success' => true, 'id' => $logId]);
+            }
+            break;
+
+        // ----------------------------------------------------
+        // 11. UPLOADED FILES ARCHIVE API
+        // ----------------------------------------------------
+        case 'uploaded_files':
+        case 'uploads_archive':
+            if ($method === 'GET') {
+                $stmt = $pdo->query("SELECT * FROM uploaded_files ORDER BY created_at DESC LIMIT 100");
+                $rows = $stmt->fetchAll();
+                echo json_encode($rows);
+            }
+            break;
+
+        // ----------------------------------------------------
+        // 12. DATABASE & SERVER HEALTH CHECK
         // ----------------------------------------------------
         case 'health':
             $startTime = microtime(true);
