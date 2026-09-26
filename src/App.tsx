@@ -32,15 +32,16 @@ import {
   FileText, 
   Sliders, 
   Save, 
-  ShieldCheck,
-  UserCheck,
-  Trash2,
-  RotateCcw,
-  Database,
-  FolderLock,
-  Zap,
-  Truck,
-  Building2
+  ShieldCheck, 
+  UserCheck, 
+  Trash2, 
+  RotateCcw, 
+  Database, 
+  FolderLock, 
+  Zap, 
+  Truck, 
+  Building2,
+  LogOut
 } from 'lucide-react';
 import { 
   apiGetProducts,
@@ -158,14 +159,18 @@ export default function App() {
       setSettings(setts);
       setSettingsForm(setts);
 
-      // Current active user restoration
+      // Current active user restoration (only restore if previously logged in)
       const savedCurrentUser = localStorage.getItem('jm_current_user');
       if (savedCurrentUser) {
-        setCurrentUser(JSON.parse(savedCurrentUser));
-      } else if (staff.length > 0) {
-        setCurrentUser(staff[0]);
+        try {
+          const parsed = JSON.parse(savedCurrentUser);
+          const matched = staff.find(s => s.id === parsed.id) || parsed;
+          setCurrentUser(matched);
+        } catch {
+          setCurrentUser(null);
+        }
       } else {
-        setCurrentUser(INITIAL_STAFF_USERS[0]);
+        setCurrentUser(null);
       }
     } catch (e) {
       console.error('Initial fetch warning:', e);
@@ -494,11 +499,7 @@ export default function App() {
         <PublicCatalog 
           products={products}
           onAdminClick={() => {
-            if (currentUser) {
-              setCurrentView('dashboard');
-            } else {
-              setCurrentView('login');
-            }
+            setCurrentView('login');
           }}
         />
       )}
@@ -526,13 +527,19 @@ export default function App() {
 
               {/* Sidebar Tabs Links */}
               <nav className="p-4 space-y-1.5 text-xs font-bold uppercase tracking-wider">
-                {/* Switch to Public Link */}
+                {/* Switch to Public Website & Logout */}
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-lg transition-all text-left mb-4 font-extrabold cursor-pointer"
+                  className="w-full flex items-center justify-between px-3.5 py-2.5 bg-slate-800/80 hover:bg-rose-950/70 text-slate-200 hover:text-white border border-slate-700/70 hover:border-rose-800 rounded-xl transition-all text-left mb-4 font-extrabold cursor-pointer group shadow-2xs"
+                  title="Logout and visit Public Website"
                 >
-                  <Globe className="w-4 h-4 text-rose-500" />
-                  Public Website
+                  <span className="flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-blue-400 group-hover:text-rose-400" />
+                    Public Website
+                  </span>
+                  <span className="text-[9px] bg-slate-700 group-hover:bg-rose-900 text-slate-300 group-hover:text-rose-200 px-2 py-0.5 rounded font-bold uppercase tracking-wider">
+                    Logout
+                  </span>
                 </button>
 
                 <div className="text-[10px] text-slate-500 tracking-widest uppercase font-black px-3 pb-2">
@@ -678,8 +685,8 @@ export default function App() {
 
             {/* Sidebar Active User Profile Card */}
             {currentUser && (
-              <div className="p-4 border-t border-slate-950 bg-slate-950/60">
-                <div className="flex items-center justify-between mb-2">
+              <div className="p-4 border-t border-slate-950 bg-slate-950/60 space-y-2">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 overflow-hidden">
                     <div className="w-8 h-8 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center flex-shrink-0 text-xs">
                       {currentUser.name.charAt(0)}
@@ -695,13 +702,25 @@ export default function App() {
                     {currentUser.role}
                   </span>
                 </div>
-                <button
-                  onClick={() => setCurrentView('login')}
-                  className="w-full flex items-center justify-center gap-1.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-[10px] font-bold uppercase transition-colors cursor-pointer"
-                >
-                  <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
-                  Switch Account
-                </button>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setCurrentView('login')}
+                    className="flex items-center justify-center gap-1 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-[10px] font-bold uppercase transition-colors cursor-pointer"
+                    title="Switch user account"
+                  >
+                    <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                    Switch
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center justify-center gap-1 py-1.5 bg-rose-950/80 hover:bg-rose-900 text-rose-200 border border-rose-900/60 rounded-lg text-[10px] font-bold uppercase transition-colors cursor-pointer"
+                    title="Logout from Admin Panel"
+                  >
+                    <LogOut className="w-3.5 h-3.5 text-rose-400" />
+                    Logout
+                  </button>
+                </div>
               </div>
             )}
           </aside>
@@ -727,11 +746,21 @@ export default function App() {
                 <span className="hidden lg:inline text-xs italic text-blue-900 font-medium font-sans">
                   "Your Problem Solution is Sustainable Partner"
                 </span>
-                <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-[10px] font-black uppercase tracking-wider shadow-2xs">
+                <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-[10px] font-black uppercase tracking-wider shadow-2xs">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                   <Zap className="w-3 h-3 text-emerald-600 fill-emerald-600" />
                   Real-Time SQL Live Sync Active
                 </div>
+                
+                {/* Header Logout Button */}
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer"
+                  title="Logout from Admin Panel"
+                >
+                  <LogOut className="w-3.5 h-3.5 text-rose-600" />
+                  Logout
+                </button>
               </div>
             </header>
 
