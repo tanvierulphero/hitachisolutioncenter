@@ -1,7 +1,6 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=$HOME/localmarket247.top
-    - /bin/cp -R dist/* $DEPLOYPATH/ 2>/dev/null || /bin/cp -R dist/* $HOME/public_html/
-    - /bin/cp -R api $DEPLOYPATH/ 2>/dev/null || /bin/cp -R api $HOME/public_html/
-    - /bin/cp .htaccess $DEPLOYPATH/ 2>/dev/null || /bin/cp .htaccess $HOME/public_html/
+    - export DEPLOYPATH=/home/localmar/public_html/
+    - /bin/cp -R * $DEPLOYPATH
+    - /bin/cp -R .htaccess $DEPLOYPATH 2>/dev/null || true
