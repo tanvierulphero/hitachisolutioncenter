@@ -132,23 +132,40 @@ export interface FieldDispatchItem {
   totalPrice: number;
 }
 
-export type FieldDispatchStatus = 'Pending Return' | 'Completed' | 'Cancelled';
+export type FieldDispatchStatus = 'Completed' | 'Pending' | 'In Progress' | 'Cancelled';
+export type FieldPaymentStatus = 'Paid' | 'Partial' | 'Due';
 
 export interface FieldDispatch {
   id: string;
-  dispatchNumber: string; // e.g. DISP/2026/0001
-  staffId: string;
-  staffName: string;
-  customerId: string;
-  customerName: string;
-  customerCompany: string;
-  customerPhone: string;
-  purpose: string; // e.g. "On-site Service & Trial Demo"
-  dispatchDate: string;
+  date: string;              // Date of entry (YYYY-MM-DD)
+  staffId?: string;          // Staff ID if linked
+  staffName: string;         // কর্মচারীর নাম (Employee / Staff Name)
+  customerId?: string;       // Customer ID if linked
+  companyName: string;       // কোম্পানির নাম (Company / Client Name)
+  address: string;           // ঠিকানা / সাইট লোকেশন (Address / Location)
+  phone?: string;            // যোগাযোগ নম্বর (Phone)
+  description: string;       // কাজের বিবরণ (Work / Service / Job Details)
+  billNo: string;            // বিল নং / মেমো নং (Bill / Voucher / Memo No)
+  billAmount: number;        // মোট বিল এমাউন্ট (Total Bill Amount ৳)
+  paidAmount: number;        // পেইড এমাউন্ট (Paid / Received Amount ৳)
+  dueAmount: number;         // বিল ডিউ (Due Amount ৳)
+  expenseAmount: number;     // কর্মচারীর খরচ (Staff Field Expense / Conveyance ৳)
+  expenseDetails?: string;   // খরচের বিবরণ (Expense Details)
+  paymentStatus: FieldPaymentStatus; // পরিশোধ স্ট্যাটাস (Paid | Partial | Due)
+  paymentMethod: 'Cash' | 'Bank Transfer' | 'bKash/Nagad' | 'Cheque'; // পেমেন্ট মেথড
+  status: FieldDispatchStatus; // কাজের স্ট্যাটাস (Completed | Pending | In Progress)
+  notes?: string;            // অতিরিক্ত মন্তব্য / নোট
+  createdAt?: string;
+
+  // Backward compatibility fields
+  dispatchNumber?: string;
+  dispatchDate?: string;
+  customerName?: string;
+  customerCompany?: string;
+  customerPhone?: string;
+  purpose?: string;
   returnDate?: string | null;
-  status: FieldDispatchStatus;
-  notes?: string;
-  items: FieldDispatchItem[];
+  items?: FieldDispatchItem[];
 }
 
 export interface StaffUser {

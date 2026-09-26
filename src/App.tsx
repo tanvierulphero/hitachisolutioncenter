@@ -458,7 +458,7 @@ export default function App() {
     }
   };
 
-  // HANDLERS FOR FIELD DISPATCHES
+  // HANDLERS FOR FIELD DISPATCHES / SERVICE LOGS
   const handleSaveDispatch = async (dispatch: FieldDispatch) => {
     let list = [...dispatches];
     const existingIndex = dispatches.findIndex(d => d.id === dispatch.id);
@@ -469,41 +469,6 @@ export default function App() {
     }
     setDispatches(list);
     localStorage.setItem('hsc_dispatches', JSON.stringify(list));
-
-    // Update showroom inventory stock levels
-    if (existingIndex < 0) {
-      // NEW DISPATCH: Deduct issued quantities from available stock
-      const updatedProducts = products.map(prod => {
-        const item = dispatch.items.find(it => it.productId === prod.id);
-        if (item) {
-          const updatedProd = {
-            ...prod,
-            stock: Math.max(0, prod.stock - item.issuedQty)
-          };
-          apiSaveProduct(updatedProd).catch(() => {});
-          return updatedProd;
-        }
-        return prod;
-      });
-      setProducts(updatedProducts);
-      localStorage.setItem('hsc_products', JSON.stringify(updatedProducts));
-    } else if (dispatch.status === 'Completed') {
-      // RECONCILED: Return returnedQty back to available stock
-      const updatedProducts = products.map(prod => {
-        const item = dispatch.items.find(it => it.productId === prod.id);
-        if (item && item.returnedQty > 0) {
-          const updatedProd = {
-            ...prod,
-            stock: prod.stock + item.returnedQty
-          };
-          apiSaveProduct(updatedProd).catch(() => {});
-          return updatedProd;
-        }
-        return prod;
-      });
-      setProducts(updatedProducts);
-      localStorage.setItem('hsc_products', JSON.stringify(updatedProducts));
-    }
 
     try {
       await apiSaveFieldDispatch(dispatch);
@@ -799,7 +764,7 @@ export default function App() {
                   </button>
                 )}
 
-                {/* Tab: Field Dispatches */}
+                {/* Tab: Field Service & Dispatches */}
                 {hasPermission('view_field_dispatch') && (
                   <button
                     onClick={() => { setActiveTab('dispatch'); setEditingDocument(null); setIsCreatingDoc(null); }}
@@ -810,7 +775,7 @@ export default function App() {
                     }`}
                   >
                     <Truck className="w-4 h-4 text-amber-400" />
-                    Field Dispatches
+                    Field Service & Dispatches
                   </button>
                 )}
 
@@ -1033,17 +998,15 @@ export default function App() {
                     />
                   )}
 
-                  {/* TAB PANEL 4d: Field Dispatches Movement Hub */}
+                  {/* TAB PANEL 4d: Field Service & Work Logs Hub */}
                   {activeTab === 'dispatch' && hasPermission('view_field_dispatch') && (
                     <FieldDispatchManager 
                       dispatches={dispatches}
-                      products={products}
                       customers={customers}
                       staffUsers={staffUsers}
                       settings={settings}
                       onSaveDispatch={handleSaveDispatch}
                       onDeleteDispatch={handleDeleteDispatch}
-                      onCreateInvoiceFromDispatch={handleSaveDocument}
                     />
                   )}
 

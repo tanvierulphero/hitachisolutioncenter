@@ -179,7 +179,7 @@ app.post('/api/products', async (req, res) => {
     if (!item.id) {
       return res.status(400).json({ error: 'Missing product ID' });
     }
-    await db.insert(products).values(item).onConflictDoUpdate({
+    await (db.insert(products) as any).values(item).onConflictDoUpdate({
       target: products.id,
       set: {
         name: item.name,
@@ -232,7 +232,7 @@ app.post('/api/customers', async (req, res) => {
     if (!item.id) {
       return res.status(400).json({ error: 'Missing customer ID' });
     }
-    await db.insert(customers).values(item).onConflictDoUpdate({
+    await (db.insert(customers) as any).values(item).onConflictDoUpdate({
       target: customers.id,
       set: {
         companyId: item.companyId || '',
@@ -282,7 +282,7 @@ app.post('/api/documents', async (req, res) => {
     if (!item.id) {
       return res.status(400).json({ error: 'Missing document ID' });
     }
-    await db.insert(documents).values(item).onConflictDoUpdate({
+    await (db.insert(documents) as any).values(item).onConflictDoUpdate({
       target: documents.id,
       set: {
         type: item.type,
@@ -352,7 +352,7 @@ app.post('/api/staff', async (req, res) => {
     if (!item.id) {
       return res.status(400).json({ error: 'Missing staff user ID' });
     }
-    await db.insert(staffUsers).values(item).onConflictDoUpdate({
+    await (db.insert(staffUsers) as any).values(item).onConflictDoUpdate({
       target: staffUsers.id,
       set: {
         name: item.name,
@@ -405,7 +405,7 @@ app.get('/api/settings', async (_req, res) => {
 app.post('/api/settings', async (req, res) => {
   try {
     const item = req.body;
-    await db.insert(settings).values({
+    await (db.insert(settings) as any).values({
       id: 'global_settings',
       ...item,
     }).onConflictDoUpdate({
@@ -454,21 +454,62 @@ app.post('/api/field-dispatches', async (req, res) => {
     if (!item.id) {
       return res.status(400).json({ error: 'Missing field dispatch ID' });
     }
-    await db.insert(fieldDispatches).values(item).onConflictDoUpdate({
+    await (db.insert(fieldDispatches) as any).values({
+      id: item.id,
+      date: item.date || item.dispatchDate || new Date().toISOString().split('T')[0],
+      staffId: item.staffId || '',
+      staffName: item.staffName || '',
+      customerId: item.customerId || '',
+      companyName: item.companyName || item.customerCompany || '',
+      address: item.address || '',
+      phone: item.phone || item.customerPhone || '',
+      description: item.description || item.purpose || '',
+      billNo: item.billNo || item.dispatchNumber || '',
+      billAmount: item.billAmount ?? 0,
+      paidAmount: item.paidAmount ?? 0,
+      dueAmount: item.dueAmount ?? 0,
+      expenseAmount: item.expenseAmount ?? 0,
+      expenseDetails: item.expenseDetails || '',
+      paymentStatus: item.paymentStatus || 'Paid',
+      paymentMethod: item.paymentMethod || 'Cash',
+      status: item.status || 'Completed',
+      notes: item.notes || '',
+      dispatchNumber: item.dispatchNumber || item.billNo || '',
+      customerName: item.customerName || '',
+      customerCompany: item.customerCompany || item.companyName || '',
+      customerPhone: item.customerPhone || item.phone || '',
+      purpose: item.purpose || item.description || '',
+      dispatchDate: item.dispatchDate || item.date || '',
+      returnDate: item.returnDate || null,
+      items: item.items || [],
+    }).onConflictDoUpdate({
       target: fieldDispatches.id,
       set: {
-        dispatchNumber: item.dispatchNumber,
-        staffId: item.staffId,
-        staffName: item.staffName,
-        customerId: item.customerId,
-        customerName: item.customerName,
-        customerCompany: item.customerCompany || '',
-        customerPhone: item.customerPhone || '',
-        purpose: item.purpose || '',
-        dispatchDate: item.dispatchDate,
-        returnDate: item.returnDate || null,
-        status: item.status,
+        date: item.date || item.dispatchDate || '',
+        staffId: item.staffId || '',
+        staffName: item.staffName || '',
+        customerId: item.customerId || '',
+        companyName: item.companyName || item.customerCompany || '',
+        address: item.address || '',
+        phone: item.phone || item.customerPhone || '',
+        description: item.description || item.purpose || '',
+        billNo: item.billNo || item.dispatchNumber || '',
+        billAmount: item.billAmount ?? 0,
+        paidAmount: item.paidAmount ?? 0,
+        dueAmount: item.dueAmount ?? 0,
+        expenseAmount: item.expenseAmount ?? 0,
+        expenseDetails: item.expenseDetails || '',
+        paymentStatus: item.paymentStatus || 'Paid',
+        paymentMethod: item.paymentMethod || 'Cash',
+        status: item.status || 'Completed',
         notes: item.notes || '',
+        dispatchNumber: item.dispatchNumber || item.billNo || '',
+        customerName: item.customerName || '',
+        customerCompany: item.customerCompany || item.companyName || '',
+        customerPhone: item.customerPhone || item.phone || '',
+        purpose: item.purpose || item.description || '',
+        dispatchDate: item.dispatchDate || item.date || '',
+        returnDate: item.returnDate || null,
         items: item.items || [],
       },
     });
@@ -510,7 +551,7 @@ app.post('/api/suppliers', async (req, res) => {
     if (!item.id) {
       return res.status(400).json({ error: 'Missing supplier ID' });
     }
-    await db.insert(suppliers).values(item).onConflictDoUpdate({
+    await (db.insert(suppliers) as any).values(item).onConflictDoUpdate({
       target: suppliers.id,
       set: {
         supplierId: item.supplierId || '',
@@ -562,7 +603,7 @@ app.post('/api/purchases', async (req, res) => {
     if (!item.id) {
       return res.status(400).json({ error: 'Missing purchase ID' });
     }
-    await db.insert(purchases).values(item).onConflictDoUpdate({
+    await (db.insert(purchases) as any).values(item).onConflictDoUpdate({
       target: purchases.id,
       set: {
         purchaseNumber: item.purchaseNumber,

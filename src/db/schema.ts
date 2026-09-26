@@ -119,33 +119,37 @@ export const settings = pgTable('settings', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
-// Field Movement / Dispatch Challans table
+// Field Service & Work Records table
 export const fieldDispatches = pgTable('field_dispatches', {
   id: text('id').primaryKey().notNull(),
-  dispatchNumber: text('dispatch_number').notNull(),
-  staffId: text('staff_id').notNull(),
+  date: text('date').default(''),
+  staffId: text('staff_id').default(''),
   staffName: text('staff_name').notNull(),
-  customerId: text('customer_id').notNull(),
-  customerName: text('customer_name').notNull(),
+  customerId: text('customer_id').default(''),
+  companyName: text('company_name').default(''),
+  address: text('address').default(''),
+  phone: text('phone').default(''),
+  description: text('description').default(''),
+  billNo: text('bill_no').default(''),
+  billAmount: real('bill_amount').default(0),
+  paidAmount: real('paid_amount').default(0),
+  dueAmount: real('due_amount').default(0),
+  expenseAmount: real('expense_amount').default(0),
+  expenseDetails: text('expense_details').default(''),
+  paymentStatus: text('payment_status').default('Paid'), // 'Paid' | 'Partial' | 'Due'
+  paymentMethod: text('payment_method').default('Cash'),
+  status: text('status').default('Completed'), // 'Completed' | 'Pending' | 'In Progress'
+  notes: text('notes').default(''),
+  
+  // Backward compatibility fields
+  dispatchNumber: text('dispatch_number').default(''),
+  customerName: text('customer_name').default(''),
   customerCompany: text('customer_company').default(''),
   customerPhone: text('customer_phone').default(''),
   purpose: text('purpose').default(''),
-  dispatchDate: text('dispatch_date').notNull(),
+  dispatchDate: text('dispatch_date').default(''),
   returnDate: text('return_date'),
-  status: text('status').notNull(), // 'Pending Return' | 'Completed' | 'Cancelled'
-  notes: text('notes').default(''),
-  items: jsonb('items').$type<{
-    id: string;
-    productId: string;
-    productName: string;
-    brand: string;
-    unit: string;
-    issuedQty: number;
-    soldQty: number;
-    returnedQty: number;
-    unitPrice: number;
-    totalPrice: number;
-  }[]>().default([]),
+  items: jsonb('items').$type<any[]>().default([]),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 

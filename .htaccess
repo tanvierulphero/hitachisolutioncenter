@@ -10,17 +10,17 @@ Options -Indexes
   RewriteEngine On
   RewriteBase /
 
-  # 1. Route /api/* requests directly to PHP API backend
-  RewriteRule ^api/(.*)$ api/index.php [QSA,L]
-
-  # 2. Serve existing static files (CSS, JS, Images, SVGs)
+  # 1. Serve existing files directly (JS, CSS, images, api/upload.php, api/test_db.php, uploads/...)
   RewriteCond %{REQUEST_FILENAME} -f
   RewriteRule ^ - [L]
 
-  # 3. Serve existing directories if they contain an index file
+  # 2. Serve existing directories if they contain index
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]
 
-  # 4. Fallback all React SPA page routes to index.html
+  # 3. Route REST API requests /api/... to PHP API router
+  RewriteRule ^api/(.*)$ api/index.php?endpoint=$1 [QSA,L]
+
+  # 4. Fallback all React SPA frontend routes to index.html
   RewriteRule ^ index.html [L]
 </IfModule>

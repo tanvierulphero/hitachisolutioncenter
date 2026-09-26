@@ -85,11 +85,12 @@ export default function CompanyProfileManager({
     );
   }, [documents, activeCustomer]);
 
-  // Field Dispatches associated with this customer
+  // Field Dispatches & Services associated with this customer
   const companyDispatches = useMemo(() => {
     if (!activeCustomer) return [];
     return dispatches.filter(d => 
       d.customerId === activeCustomer.id ||
+      (d.companyName && activeCustomer.company && d.companyName.toLowerCase() === activeCustomer.company.toLowerCase()) ||
       (d.customerCompany && activeCustomer.company && d.customerCompany.toLowerCase() === activeCustomer.company.toLowerCase())
     );
   }, [dispatches, activeCustomer]);
@@ -597,33 +598,47 @@ export default function CompanyProfileManager({
                 {activeProfileTab === 'service' && (
                   <div className="space-y-4 pt-2">
                     <h4 className="font-bold text-slate-900 text-xs font-display">
-                      On-site Field Service & Dispatches
+                      On-site Field Service & Work Records
                     </h4>
 
                     {companyDispatches.length > 0 ? (
                       <div className="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100">
                         {companyDispatches.map(disp => (
-                          <div key={disp.id} className="p-4 bg-white hover:bg-slate-50 transition-colors flex justify-between items-center">
+                          <div key={disp.id} className="p-4 bg-white hover:bg-slate-50 transition-colors flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                             <div className="space-y-1">
                               <div className="flex items-center gap-2">
-                                <span className="font-mono font-bold text-blue-900 text-xs">{disp.dispatchNumber}</span>
-                                <span className="text-[10px] text-slate-500">Date: {disp.dispatchDate}</span>
+                                <span className="font-mono font-bold text-blue-900 text-xs">{disp.billNo || disp.dispatchNumber}</span>
+                                <span className="text-[10px] text-slate-500">Date: {disp.date || disp.dispatchDate}</span>
                               </div>
                               <p className="text-xs font-bold text-slate-800">Responsible Staff: {disp.staffName}</p>
-                              <p className="text-[11px] text-slate-500 italic">{disp.purpose}</p>
+                              <p className="text-[11px] text-slate-600">{disp.description || disp.purpose}</p>
                             </div>
 
-                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold ${
-                              disp.status === 'Completed' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                            }`}>
-                              {disp.status}
-                            </span>
+                            <div className="flex items-center gap-3 text-right">
+                              <div>
+                                <span className="text-[10px] text-slate-400 font-bold block uppercase">Bill & Due</span>
+                                <span className="text-xs font-mono font-bold text-slate-900">
+                                  ৳{(disp.billAmount || 0).toLocaleString()}
+                                </span>
+                                {(disp.dueAmount || 0) > 0 && (
+                                  <span className="text-[10px] font-mono font-bold text-rose-600 block">
+                                    Due: ৳{(disp.dueAmount || 0).toLocaleString()}
+                                  </span>
+                                )}
+                              </div>
+                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold ${
+                                disp.paymentStatus === 'Paid' ? 'bg-emerald-100 text-emerald-800' : 
+                                disp.paymentStatus === 'Partial' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'
+                              }`}>
+                                {disp.paymentStatus || disp.status}
+                              </span>
+                            </div>
                           </div>
                         ))}
                       </div>
                     ) : (
                       <div className="p-8 text-center text-slate-400 border border-slate-200 rounded-xl bg-slate-50">
-                        <p className="font-bold text-slate-700">No field service dispatches recorded</p>
+                        <p className="font-bold text-slate-700">No field service records found for this company</p>
                       </div>
                     )}
                   </div>

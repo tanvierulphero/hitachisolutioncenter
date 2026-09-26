@@ -14,13 +14,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-require_once __DIR__ . '/config.php';
+if (file_exists(__DIR__ . '/config.php')) {
+    require_once __DIR__ . '/config.php';
+}
 
-$pdo = getDbConnection();
+$pdo = function_exists('getDbConnection') ? getDbConnection() : null;
 
 // Parse request URI
-$requestUri = $_SERVER['REQUEST_URI'];
-$uriPath = parse_url($requestUri, PHP_URL_PATH);
+$requestUri = $_SERVER['REQUEST_URI'] ?? '';
+$uriPath = parse_url($requestUri, PHP_URL_PATH) ?? '';
 
 // Determine endpoint and ID
 $endpoint = isset($_GET['endpoint']) ? trim($_GET['endpoint']) : '';
@@ -36,6 +38,31 @@ if (empty($endpoint)) {
             $id = isset($pathSegments[$apiIndex + 2]) ? $pathSegments[$apiIndex + 2] : null;
         }
     }
+}
+
+// Special Health / Ping endpoint returns helpful DB status
+if ($endpoint === 'health' || $endpoint === 'ping') {
+    if ($pdo === null) {
+        http_response_code(200);
+        echo json_encode([
+            'status' => 'db_config_required',
+            'connected' => false,
+            'message' => 'Please configure your MySQL database credentials in api/config.php',
+            'hint' => 'Check DB_NAME, DB_USER, DB_PASS in api/config.php',
+            'test_url' => '/api/test_db.php'
+        ]);
+        exit;
+    }
+}
+
+if ($pdo === null && !empty($endpoint)) {
+    http_response_code(200);
+    echo json_encode([
+        'error' => 'Database connection is not established. Please check api/config.php credentials.',
+        'db_configured' => false,
+        'diagnostic_tool' => '/api/test_db.php'
+    ]);
+    exit;
 }
 
 $method = $_SERVER['REQUEST_METHOD'];
