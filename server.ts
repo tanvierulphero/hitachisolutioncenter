@@ -4,9 +4,9 @@ import fs from 'fs';
 import path from 'path';
 import multer from 'multer';
 import { Server as SocketIOServer } from 'socket.io';
-import { db } from './src/db/index.ts';
+import { db, pool } from './src/db/index.ts';
 import { products, customers, documents, staffUsers, settings, fieldDispatches, suppliers, purchases } from './src/db/schema.ts';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { INITIAL_PRODUCTS, INITIAL_CUSTOMERS, INITIAL_DOCUMENTS, INITIAL_STAFF_USERS, DEFAULT_SETTINGS, INITIAL_FIELD_DISPATCHES, INITIAL_SUPPLIERS, INITIAL_PURCHASES } from './src/initialData.ts';
 
 const app = express();
@@ -83,9 +83,11 @@ io.on('connection', (socket) => {
 });
 
 // Ensure PostgreSQL table extensions and columns exist
+let isMigrated = false;
 async function initDbMigrations() {
+  if (isMigrated) return;
   try {
-    await db.execute(`
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS field_dispatches (
         id text PRIMARY KEY NOT NULL,
         dispatch_number text NOT NULL,
@@ -103,9 +105,9 @@ async function initDbMigrations() {
         items jsonb DEFAULT '[]'::jsonb,
         updated_at timestamp DEFAULT now()
       );
-    `).catch(() => {});
+    `);
 
-    await db.execute(`
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS suppliers (
         id text PRIMARY KEY NOT NULL,
         supplier_id text DEFAULT '',
@@ -119,9 +121,9 @@ async function initDbMigrations() {
         created_at text DEFAULT '',
         updated_at timestamp DEFAULT now()
       );
-    `).catch(() => {});
+    `);
 
-    await db.execute(`
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS purchases (
         id text PRIMARY KEY NOT NULL,
         purchase_number text NOT NULL,
@@ -149,10 +151,11 @@ async function initDbMigrations() {
         created_at text DEFAULT '',
         updated_at timestamp DEFAULT now()
       );
-    `).catch(() => {});
+    `);
 
-    await db.execute(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS company_id text DEFAULT '';`).catch(() => {});
-    await db.execute(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS notes text DEFAULT '';`).catch(() => {});
+    await pool.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS company_id text DEFAULT '';`).catch(() => {});
+    await pool.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS notes text DEFAULT '';`).catch(() => {});
+    isMigrated = true;
   } catch (err) {
     console.error('DB Migration notice:', err);
   }
