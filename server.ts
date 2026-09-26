@@ -505,6 +505,49 @@ app.delete('/api/field-dispatches/:id', async (req, res) => {
   }
 });
 
+// 7. Database & Server Health Diagnostics Check
+app.get('/api/health', async (_req, res) => {
+  const startTime = Date.now();
+  try {
+    await seedInitialDataIfNeeded();
+    const pCountRes: any = await db.execute(`SELECT COUNT(*) as count FROM products;`);
+    const cCountRes: any = await db.execute(`SELECT COUNT(*) as count FROM customers;`);
+    const dCountRes: any = await db.execute(`SELECT COUNT(*) as count FROM documents;`);
+    const sCountRes: any = await db.execute(`SELECT COUNT(*) as count FROM staff_users;`);
+    const fCountRes: any = await db.execute(`SELECT COUNT(*) as count FROM field_dispatches;`);
+
+    const pCount = pCountRes?.rows?.[0]?.count ?? pCountRes?.[0]?.count ?? 0;
+    const cCount = cCountRes?.rows?.[0]?.count ?? cCountRes?.[0]?.count ?? 0;
+    const dCount = dCountRes?.rows?.[0]?.count ?? dCountRes?.[0]?.count ?? 0;
+    const sCount = sCountRes?.rows?.[0]?.count ?? sCountRes?.[0]?.count ?? 0;
+    const fCount = fCountRes?.rows?.[0]?.count ?? fCountRes?.[0]?.count ?? 0;
+
+    const latency = Date.now() - startTime;
+    res.json({
+      status: 'ok',
+      database: 'PostgreSQL (Cloud SQL Database)',
+      connected: true,
+      latencyMs: latency,
+      tables: {
+        products: Number(pCount),
+        customers: Number(cCount),
+        documents: Number(dCount),
+        staff_users: Number(sCount),
+        field_dispatches: Number(fCount),
+      },
+      uploadsFolderWritable: fs.existsSync(uploadsDir),
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err: any) {
+    res.status(500).json({
+      status: 'error',
+      connected: false,
+      error: err.message || 'Database connection error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
 // Vite middleware for frontend app in development mode
 if (process.env.NODE_ENV !== 'production') {
   const { createServer: createViteServer } = await import('vite');

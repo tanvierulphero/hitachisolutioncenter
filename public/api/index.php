@@ -390,6 +390,43 @@ try {
             }
             break;
 
+        case 'health':
+            $startTime = microtime(true);
+            try {
+                $pCount = $pdo->query("SELECT COUNT(*) FROM products")->fetchColumn();
+                $cCount = $pdo->query("SELECT COUNT(*) FROM customers")->fetchColumn();
+                $dCount = $pdo->query("SELECT COUNT(*) FROM documents")->fetchColumn();
+                $sCount = $pdo->query("SELECT COUNT(*) FROM staff_users")->fetchColumn();
+                
+                $uploadDir = __DIR__ . '/../uploads/';
+                $uploadsWritable = file_exists($uploadDir) && is_writable($uploadDir);
+
+                $latency = round((microtime(true) - $startTime) * 1000, 2);
+                echo json_encode([
+                    'status' => 'ok',
+                    'database' => 'MySQL / MariaDB (cPanel)',
+                    'connected' => true,
+                    'latencyMs' => $latency,
+                    'tables' => [
+                        'products' => (int)$pCount,
+                        'customers' => (int)$cCount,
+                        'documents' => (int)$dCount,
+                        'staff_users' => (int)$sCount
+                    ],
+                    'uploadsFolderWritable' => $uploadsWritable,
+                    'timestamp' => date('c')
+                ]);
+            } catch (Exception $e) {
+                http_response_code(500);
+                echo json_encode([
+                    'status' => 'error',
+                    'connected' => false,
+                    'error' => $e->getMessage(),
+                    'timestamp' => date('c')
+                ]);
+            }
+            break;
+
         default:
             http_response_code(404);
             echo json_encode(['error' => 'Endpoint not found', 'endpoint' => $endpoint]);

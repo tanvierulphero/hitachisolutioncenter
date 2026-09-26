@@ -41,7 +41,14 @@ import {
   Zap, 
   Truck, 
   Building2,
-  LogOut
+  LogOut,
+  Activity,
+  CheckCircle2,
+  XCircle,
+  RefreshCw,
+  Server,
+  HardDrive,
+  X
 } from 'lucide-react';
 import { 
   apiGetProducts,
@@ -60,7 +67,9 @@ import {
   apiSaveSettings,
   apiGetFieldDispatches,
   apiSaveFieldDispatch,
-  apiDeleteFieldDispatch
+  apiDeleteFieldDispatch,
+  apiCheckDatabaseHealth,
+  DbHealthResult
 } from './lib/api';
 import Logo from './components/Logo';
 
@@ -96,6 +105,30 @@ export default function App() {
   // Temporary Settings Edit Form State
   const [settingsForm, setSettingsForm] = useState<BusinessSettings>(DEFAULT_SETTINGS);
   const [settingsSavedFeedback, setSettingsSavedFeedback] = useState(false);
+
+  // Database Diagnostics & Health Check State
+  const [isDbHealthModalOpen, setIsDbHealthModalOpen] = useState(false);
+  const [dbHealthData, setDbHealthData] = useState<DbHealthResult | null>(null);
+  const [isCheckingDb, setIsCheckingDb] = useState(false);
+
+  const handleCheckDatabase = async () => {
+    setIsCheckingDb(true);
+    setIsDbHealthModalOpen(true);
+    try {
+      const res = await apiCheckDatabaseHealth();
+      setDbHealthData(res);
+    } catch (err: any) {
+      setDbHealthData({
+        status: 'error',
+        database: 'Database',
+        connected: false,
+        error: err.message || 'Check failed',
+        timestamp: new Date().toISOString()
+      });
+    } finally {
+      setIsCheckingDb(false);
+    }
+  };
 
   // Helper: Permission check
   const hasPermission = (perm: PermissionKey) => {
@@ -746,11 +779,16 @@ export default function App() {
                 <span className="hidden lg:inline text-xs italic text-blue-900 font-medium font-sans">
                   "Your Problem Solution is Sustainable Partner"
                 </span>
-                <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-[10px] font-black uppercase tracking-wider shadow-2xs">
+                <button
+                  type="button"
+                  onClick={handleCheckDatabase}
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 hover:border-emerald-300 rounded-full text-[10px] font-black uppercase tracking-wider shadow-2xs cursor-pointer transition-all"
+                  title="Click to check live database connection and record metrics"
+                >
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                   <Zap className="w-3 h-3 text-emerald-600 fill-emerald-600" />
-                  Real-Time SQL Live Sync Active
-                </div>
+                  Live Database Connected &bull; Check DB
+                </button>
                 
                 {/* Header Logout Button */}
                 <button
@@ -1067,6 +1105,34 @@ export default function App() {
                       </form>
                     </div>
 
+                    {/* DATABASE HEALTH DIAGNOSTICS CARD */}
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-6 mt-6 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-blue-900 font-bold">
+                          <Activity className="w-5 h-5 text-emerald-600" />
+                          <h3 className="text-base">Live Database Health & Connection Diagnostics (ডাটাবেজ স্ট্যাটাস টেস্ট)</h3>
+                        </div>
+                        <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs font-bold flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                          Online & Synchronized
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 font-medium">
+                        Check real-time connectivity with MySQL / PostgreSQL server, verify table row counts (Products, Invoices, Dispatches, Staff), verify upload directory permissions, and measure network latency.
+                      </p>
+                      
+                      <div className="flex flex-wrap gap-3 pt-1">
+                        <button
+                          type="button"
+                          onClick={handleCheckDatabase}
+                          className="px-4 py-2.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-2 cursor-pointer shadow-xs"
+                        >
+                          <Activity className="w-4 h-4 text-emerald-400" />
+                          Run Database Health Check (ডাটাবেজ চেক করুন)
+                        </button>
+                      </div>
+                    </div>
+
                     {/* DATABASE RESET / DATA CLEAR CARD */}
                     <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-6 mt-6 space-y-4">
                       <div className="flex items-center gap-2 text-rose-700 font-bold">
@@ -1110,6 +1176,163 @@ export default function App() {
               <span>"Your Problem Solution is Sustainable Partner"</span>
             </footer>
           </main>
+        </div>
+      )}
+
+      {/* DATABASE HEALTH DIAGNOSTICS MODAL */}
+      {isDbHealthModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Database className="w-5 h-5 text-emerald-400" />
+                <div>
+                  <h3 className="text-sm font-bold font-display">Database & Server Health Check</h3>
+                  <span className="text-[10px] text-slate-400 font-mono">hitachisolutioncenter Diagnostics</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsDbHealthModalOpen(false)}
+                className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              {isCheckingDb ? (
+                <div className="py-12 flex flex-col items-center justify-center text-center space-y-3">
+                  <RefreshCw className="w-10 h-10 text-blue-600 animate-spin" />
+                  <span className="text-sm font-bold text-slate-800">Testing Database Connection...</span>
+                  <span className="text-xs text-slate-500">ডাটাবেজ সংযোগ ও টেবিল ডাটা ভেরিফাই করা হচ্ছে</span>
+                </div>
+              ) : dbHealthData ? (
+                <div className="space-y-4">
+                  {/* Status Banner */}
+                  <div className={`p-4 rounded-xl border flex items-start gap-3 ${
+                    dbHealthData.connected && dbHealthData.status === 'ok'
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                      : 'bg-rose-50 border-rose-200 text-rose-900'
+                  }`}>
+                    {dbHealthData.connected && dbHealthData.status === 'ok' ? (
+                      <CheckCircle2 className="w-6 h-6 text-emerald-600 flex-shrink-0 mt-0.5" />
+                    ) : (
+                      <XCircle className="w-6 h-6 text-rose-600 flex-shrink-0 mt-0.5" />
+                    )}
+                    <div>
+                      <h4 className="font-bold text-sm">
+                        {dbHealthData.connected ? 'Database Connected & Fully Functional' : 'Database Connection Issue'}
+                      </h4>
+                      <p className="text-xs mt-0.5 opacity-90">
+                        {dbHealthData.connected 
+                          ? 'ডাটাবেজ সঠিকভাবে যুক্ত আছে এবং রিয়েল-টাইম সিঙ্ক সক্রিয় রয়েছে।' 
+                          : (dbHealthData.error || 'Could not reach database server.')}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Details Grid */}
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Database Engine</span>
+                      <span className="font-bold text-slate-800 block truncate flex items-center gap-1.5">
+                        <Server className="w-3.5 h-3.5 text-blue-600" />
+                        {dbHealthData.database || 'SQL Database'}
+                      </span>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Response Latency</span>
+                      <span className="font-bold text-emerald-700 block flex items-center gap-1.5">
+                        <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                        {dbHealthData.latencyMs !== undefined ? `${dbHealthData.latencyMs} ms (Fast)` : 'Active'}
+                      </span>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Uploads Storage</span>
+                      <span className="font-bold text-slate-800 block flex items-center gap-1.5">
+                        <HardDrive className="w-3.5 h-3.5 text-teal-600" />
+                        {dbHealthData.uploadsFolderWritable !== false ? 'Writable (/uploads/)' : 'Restricted'}
+                      </span>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Last Verified</span>
+                      <span className="font-mono text-[11px] text-slate-600 block">
+                        {new Date(dbHealthData.timestamp).toLocaleTimeString()}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Table Record Counts */}
+                  {dbHealthData.tables && (
+                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">
+                        Database Tables & Row Counts (সংরক্ষিত ডাটার তালিকা):
+                      </span>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                        <div className="bg-white p-2 rounded-lg border border-slate-200 flex justify-between items-center">
+                          <span className="text-slate-600 font-medium">Products:</span>
+                          <span className="font-bold text-blue-900 bg-blue-50 px-2 py-0.5 rounded text-xs">
+                            {dbHealthData.tables.products ?? 0}
+                          </span>
+                        </div>
+                        <div className="bg-white p-2 rounded-lg border border-slate-200 flex justify-between items-center">
+                          <span className="text-slate-600 font-medium">Customers:</span>
+                          <span className="font-bold text-blue-900 bg-blue-50 px-2 py-0.5 rounded text-xs">
+                            {dbHealthData.tables.customers ?? 0}
+                          </span>
+                        </div>
+                        <div className="bg-white p-2 rounded-lg border border-slate-200 flex justify-between items-center">
+                          <span className="text-slate-600 font-medium">Documents:</span>
+                          <span className="font-bold text-blue-900 bg-blue-50 px-2 py-0.5 rounded text-xs">
+                            {dbHealthData.tables.documents ?? 0}
+                          </span>
+                        </div>
+                        <div className="bg-white p-2 rounded-lg border border-slate-200 flex justify-between items-center">
+                          <span className="text-slate-600 font-medium">Staff Accounts:</span>
+                          <span className="font-bold text-blue-900 bg-blue-50 px-2 py-0.5 rounded text-xs">
+                            {dbHealthData.tables.staff_users ?? 0}
+                          </span>
+                        </div>
+                        {dbHealthData.tables.field_dispatches !== undefined && (
+                          <div className="bg-white p-2 rounded-lg border border-slate-200 flex justify-between items-center">
+                            <span className="text-slate-600 font-medium">Dispatches:</span>
+                            <span className="font-bold text-blue-900 bg-blue-50 px-2 py-0.5 rounded text-xs">
+                              {dbHealthData.tables.field_dispatches ?? 0}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-slate-50 px-6 py-3 border-t border-slate-200 flex justify-between items-center">
+              <button
+                type="button"
+                onClick={handleCheckDatabase}
+                disabled={isCheckingDb}
+                className="px-4 py-2 bg-blue-900 hover:bg-blue-950 text-white rounded-lg text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isCheckingDb ? 'animate-spin' : ''}`} />
+                Re-Test Connection
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsDbHealthModalOpen(false)}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold cursor-pointer transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

@@ -221,3 +221,65 @@ export async function apiUploadImage(file: File): Promise<{ url: string }> {
     throw new Error('Could not process image file: ' + (err.message || 'File read error'));
   }
 }
+
+export interface DbHealthResult {
+  status: 'ok' | 'error';
+  database: string;
+  connected: boolean;
+  latencyMs?: number;
+  tables?: {
+    products: number;
+    customers: number;
+    documents: number;
+    staff_users: number;
+    field_dispatches?: number;
+  };
+  uploadsFolderWritable?: boolean;
+  timestamp: string;
+  error?: string;
+}
+
+export async function apiCheckDatabaseHealth(): Promise<DbHealthResult> {
+  const isCpanel = isCpanelDeployment();
+  const endpoint = isCpanel ? '/api/index.php?endpoint=health' : '/api/health';
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const response = await fetch(endpoint, {
+      signal: controller.signal,
+      headers: { 'Cache-Control': 'no-cache' },
+    });
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      return await response.json();
+    }
+    const errData = await response.json().catch(() => ({}));
+    return {
+      status: 'error',
+      database: isCpanel ? 'MySQL (cPanel)' : 'PostgreSQL (Cloud SQL)',
+      connected: false,
+      error: errData.error || `HTTP ${response.status} ${response.statusText}`,
+      timestamp: new Date().toISOString(),
+    };
+  } catch (err: any) {
+    // Try fallback endpoint
+    if (!isCpanel) {
+      try {
+        const fallbackRes = await fetch('/api/index.php?endpoint=health');
+        if (fallbackRes.ok) return await fallbackRes.json();
+      } catch {
+        // Fallback failed
+      }
+    }
+    return {
+      status: 'error',
+      database: isCpanel ? 'MySQL (cPanel)' : 'PostgreSQL (Cloud SQL)',
+      connected: false,
+      error: err.name === 'AbortError' ? 'Connection timed out' : (err.message || 'Network error'),
+      timestamp: new Date().toISOString(),
+    };
+  }
+}
+
