@@ -1,13 +1,13 @@
 <?php
 // ========================================================
-// cPanel MySQL Database Configuration
-// Fill in your cPanel MySQL Database details below
+// cPanel MySQL Database Configuration Template
+// Copy this file to config.php and fill in your DB credentials
 // ========================================================
 
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'your_cpanel_db_name');     // e.g. localmar_hitachi
-define('DB_USER', 'your_cpanel_db_user');     // e.g. localmar_user
-define('DB_PASS', 'your_cpanel_db_password'); // e.g. MySecretPassword123
+define('DB_NAME', ''); // e.g. 'cpaneluser_hitachidb'
+define('DB_USER', ''); // e.g. 'cpaneluser_dbuser'
+define('DB_PASS', ''); // e.g. 'YourStrongPassword123'
 
 function getDbConnection() {
     static $pdo = null;
@@ -21,8 +21,11 @@ function getDbConnection() {
         try {
             $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
         } catch (PDOException $e) {
-            http_response_code(500);
-            echo json_encode(["error" => "Database connection failed: " . $e->getMessage()]);
+            http_response_code(200);
+            echo json_encode([
+                "error" => "Database connection failed: " . $e->getMessage(),
+                "db_error" => true
+            ]);
             exit;
         }
     }

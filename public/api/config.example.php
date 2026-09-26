@@ -1,13 +1,13 @@
 <?php
 // ========================================================
-// cPanel MySQL Database Configuration
-// Fill in your cPanel MySQL Database details below
+// cPanel MySQL Database Configuration Template
+// Copy this file to config.php and fill in your DB credentials
 // ========================================================
 
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'localmar_hitachi');
-define('DB_USER', 'localmar_admin');
-define('DB_PASS', 'localmar_admin');
+define('DB_NAME', ''); // e.g. 'cpaneluser_hitachidb'
+define('DB_USER', ''); // e.g. 'cpaneluser_dbuser'
+define('DB_PASS', ''); // e.g. 'YourStrongPassword123'
 
 function getDbConnection() {
     static $pdo = null;
@@ -23,7 +23,7 @@ function getDbConnection() {
         } catch (PDOException $e) {
             http_response_code(200);
             echo json_encode([
-                "error" => "Database connection failed: " . $e->getMessage() . ". Please create database '" . DB_NAME . "' in cPanel -> MySQL Databases and import schema.sql.",
+                "error" => "Database connection failed: " . $e->getMessage(),
                 "db_error" => true
             ]);
             exit;
