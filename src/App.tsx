@@ -66,12 +66,19 @@ import Logo from './components/Logo';
 export default function App() {
   // Authentication & Layout Views
   // "catalog" | "login" | "dashboard"
-  const [currentView, setCurrentView] = useState<'catalog' | 'login' | 'dashboard'>('dashboard');
+  const [currentView, setCurrentView] = useState<'catalog' | 'login' | 'dashboard'>('catalog');
   const [activeTab, setActiveTab] = useState<string>('overview'); // "overview", "inventory", "docs", "reports", "due_ledger", "staff_management", "settings"
 
   // Staff Sub-Accounts & Current Active User
   const [staffUsers, setStaffUsers] = useState<StaffUser[]>(INITIAL_STAFF_USERS);
-  const [currentUser, setCurrentUser] = useState<StaffUser | null>(INITIAL_STAFF_USERS[0]);
+  const [currentUser, setCurrentUser] = useState<StaffUser | null>(() => {
+    try {
+      const saved = localStorage.getItem('jm_current_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
 
   // Core Database lists
   const [products, setProducts] = useState<Product[]>([]);
@@ -459,6 +466,8 @@ export default function App() {
 
   // Quick helper to logout / reset view
   const handleLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem('jm_current_user');
     setCurrentView('catalog');
     setViewingDocument(null);
     setEditingDocument(null);
