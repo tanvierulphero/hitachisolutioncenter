@@ -1,4 +1,4 @@
-import { Product, Customer, Document, StaffUser, BusinessSettings, FieldDispatch } from '../types';
+import { Product, Customer, Document, StaffUser, BusinessSettings, FieldDispatch, Supplier, Purchase } from '../types';
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   let response: Response;
@@ -118,6 +118,26 @@ export const apiSaveFieldDispatch = (dispatch: FieldDispatch): Promise<FieldDisp
   });
 export const apiDeleteFieldDispatch = (id: string): Promise<{ success: boolean }> =>
   fetchJson<{ success: boolean }>(`/api/field-dispatches/${id}`, { method: 'DELETE' });
+
+// Suppliers API
+export const apiGetSuppliers = (): Promise<Supplier[]> => fetchJson<Supplier[]>('/api/suppliers');
+export const apiSaveSupplier = (supplier: Supplier): Promise<Supplier> =>
+  fetchJson<Supplier>('/api/suppliers', {
+    method: 'POST',
+    body: JSON.stringify(supplier),
+  });
+export const apiDeleteSupplier = (id: string): Promise<{ success: boolean }> =>
+  fetchJson<{ success: boolean }>(`/api/suppliers/${id}`, { method: 'DELETE' });
+
+// Purchases / Stock Inward API
+export const apiGetPurchases = (): Promise<Purchase[]> => fetchJson<Purchase[]>('/api/purchases');
+export const apiSavePurchase = (purchase: Purchase): Promise<Purchase> =>
+  fetchJson<Purchase>('/api/purchases', {
+    method: 'POST',
+    body: JSON.stringify(purchase),
+  });
+export const apiDeletePurchase = (id: string): Promise<{ success: boolean }> =>
+  fetchJson<{ success: boolean }>(`/api/purchases/${id}`, { method: 'DELETE' });
 
 // Helper to read and compress file as compact base64 data URL (max 800px, 70% JPEG quality)
 // Prevents cPanel LiteSpeed HTTP 503 errors caused by oversized POST payloads

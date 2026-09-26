@@ -1,9 +1,11 @@
-import { Product, Customer, Document, BusinessSettings, StaffUser, PermissionKey, FieldDispatch } from './types';
+import { Product, Customer, Document, BusinessSettings, StaffUser, PermissionKey, FieldDispatch, Supplier, Purchase } from './types';
 
 export const ALL_PERMISSIONS: { key: PermissionKey; label: string; description: string; category: string }[] = [
   { key: 'view_overview', label: 'Overview Analytics', description: 'View high-level revenue and business overview stats', category: 'General' },
   { key: 'view_inventory', label: 'View Stock Inventory', description: 'Browse spare parts and machine catalog items', category: 'Inventory' },
   { key: 'manage_inventory', label: 'Manage Stock Inventory', description: 'Add, update pricing, or remove catalog stock items', category: 'Inventory' },
+  { key: 'view_purchases', label: 'View Purchase Entries', description: 'Browse stock inward and supplier purchases list', category: 'Purchases' },
+  { key: 'manage_purchases', label: 'Manage Purchase Entries', description: 'Create purchase invoices, inward stock and supplier payments', category: 'Purchases' },
   { key: 'view_documents', label: 'View Documents Hub', description: 'Access offer letters, quotations, bills, and invoices list', category: 'Documents' },
   { key: 'create_documents', label: 'Create New Documents', description: 'Generate offer letters, quotes, bills, and invoices', category: 'Documents' },
   { key: 'edit_documents', label: 'Edit Existing Documents', description: 'Modify created quotations, bills, and invoices', category: 'Documents' },
@@ -510,5 +512,145 @@ export const INITIAL_FIELD_DISPATCHES: FieldDispatch[] = [
         totalPrice: 72000
       }
     ]
+  }
+];
+
+export const INITIAL_SUPPLIERS: Supplier[] = [
+  {
+    id: "sup-1",
+    supplierId: "SUP-1001",
+    name: "Mahmudur Rahman",
+    company: "Hitachi Air Solutions Japan & Singapore Regional Hub",
+    phone: "01711-554433",
+    email: "supply@hitachi-regional.com",
+    address: "Motijheel C/A, Dhaka-1000.",
+    contactPerson: "Engr. Mahmud",
+    notes: "Main authorized importer & OEM spare parts supplier.",
+    createdAt: "2026-01-05"
+  },
+  {
+    id: "sup-2",
+    supplierId: "SUP-1002",
+    name: "Sajjadul Karim",
+    company: "Atlas Industrial Lubricants & Machinery Corp.",
+    phone: "01819-223311",
+    email: "sales@atlas-lubricants.bd",
+    address: "Tejgaon I/A, Dhaka-1208.",
+    contactPerson: "Sajjadul Karim",
+    notes: "Synthetic Compressor Oils & Air Filters supplier.",
+    createdAt: "2026-01-20"
+  },
+  {
+    id: "sup-3",
+    supplierId: "SUP-1003",
+    name: "Kabir Hossain",
+    company: "Pneumatic Valves & Dryer Parts Trading",
+    phone: "01912-778899",
+    email: "kabir@pneumaticparts.com",
+    address: "Nawabpur Road, Dhaka.",
+    contactPerson: "Kabir Hossain",
+    notes: "Local hardware, valves, gauges & fittings vendor.",
+    createdAt: "2026-02-10"
+  }
+];
+
+export const INITIAL_PURCHASES: Purchase[] = [
+  {
+    id: "pur-2026-001",
+    purchaseNumber: "PUR/2026/0001",
+    supplierInvoiceNo: "INV-HIT-8821",
+    supplierId: "sup-1",
+    supplierName: "Mahmudur Rahman",
+    supplierCompany: "Hitachi Air Solutions Japan & Singapore Regional Hub",
+    supplierPhone: "01711-554433",
+    supplierEmail: "supply@hitachi-regional.com",
+    supplierAddress: "Motijheel C/A, Dhaka-1000.",
+    purchaseDate: "2026-09-10",
+    items: [
+      {
+        id: "pur-item-1",
+        productId: "prod-1",
+        productName: "Hitachi Hiscrew 37 S-Type Screw Compressor",
+        sku: "HIT-HS-37S",
+        brand: "Hitachi",
+        unit: "Set",
+        quantity: 2,
+        unitCost: 520000,
+        totalCost: 1040000
+      },
+      {
+        id: "pur-item-2",
+        productId: "prod-5",
+        productName: "Genuine Air Filter for Hitachi 22kW Compressor",
+        sku: "HIT-AF-22K",
+        brand: "Hitachi",
+        unit: "Pcs",
+        quantity: 20,
+        unitCost: 8500,
+        totalCost: 170000
+      }
+    ],
+    subtotal: 1210000,
+    taxRate: 0,
+    taxAmount: 0,
+    discount: 10000,
+    shippingCost: 5000,
+    grandTotal: 1205000,
+    paidAmount: 1205000,
+    dueAmount: 0,
+    paymentStatus: "Paid",
+    paymentMethod: "Bank Transfer",
+    status: "Received",
+    notes: "Direct container delivery at Gazipur central showroom.",
+    createdAt: "2026-09-10"
+  },
+  {
+    id: "pur-2026-002",
+    purchaseNumber: "PUR/2026/0002",
+    supplierInvoiceNo: "ATL-9920",
+    supplierId: "sup-2",
+    supplierName: "Sajjadul Karim",
+    supplierCompany: "Atlas Industrial Lubricants & Machinery Corp.",
+    supplierPhone: "01819-223311",
+    supplierEmail: "sales@atlas-lubricants.bd",
+    supplierAddress: "Tejgaon I/A, Dhaka-1208.",
+    purchaseDate: "2026-09-20",
+    items: [
+      {
+        id: "pur-item-3",
+        productId: "prod-7",
+        productName: "Hitachi Screw Compressor Lubricant Oil (Food Grade)",
+        sku: "HIT-OIL-FG",
+        brand: "Hitachi",
+        unit: "Can (20L)",
+        quantity: 10,
+        unitCost: 36000,
+        totalCost: 360000
+      },
+      {
+        id: "pur-item-4",
+        productId: "prod-6",
+        productName: "Genuine Oil Separator Element AC-GA37",
+        sku: "AC-OS-GA37",
+        brand: "Atlas Copco",
+        unit: "Pcs",
+        quantity: 15,
+        unitCost: 18000,
+        totalCost: 270000
+      }
+    ],
+    subtotal: 630000,
+    taxRate: 0,
+    taxAmount: 0,
+    discount: 5000,
+    shippingCost: 2000,
+    grandTotal: 627000,
+    paidAmount: 300000,
+    dueAmount: 327000,
+    paymentStatus: "Partial",
+    paymentMethod: "Cheque",
+    status: "Received",
+    notes: "Advance 300k paid by Cheque. Remaining 327k due on 30-day supplier credit.",
+    createdAt: "2026-09-20"
   }
 ];

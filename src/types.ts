@@ -48,6 +48,8 @@ export type PermissionKey =
   | 'view_overview'
   | 'view_inventory'
   | 'manage_inventory'
+  | 'view_purchases'
+  | 'manage_purchases'
   | 'view_documents'
   | 'create_documents'
   | 'edit_documents'
@@ -61,6 +63,61 @@ export type PermissionKey =
   | 'manage_field_dispatch'
   | 'view_company_profiles'
   | 'manage_company_profiles';
+
+export interface Supplier {
+  id: string;
+  supplierId?: string; // e.g. SUP-1001
+  name: string;
+  company: string;
+  phone: string;
+  email: string;
+  address: string;
+  contactPerson?: string;
+  notes?: string;
+  createdAt?: string;
+}
+
+export interface PurchaseItem {
+  id: string;
+  productId: string;
+  productName: string;
+  sku?: string;
+  brand?: string;
+  unit: string;
+  quantity: number;
+  unitCost: number;
+  totalCost: number;
+}
+
+export type PurchasePaymentStatus = 'Paid' | 'Partial' | 'Due';
+export type PurchaseStatus = 'Received' | 'Ordered' | 'Pending' | 'Cancelled';
+
+export interface Purchase {
+  id: string;
+  purchaseNumber: string; // e.g. PUR/2026/0001
+  supplierInvoiceNo?: string; // e.g. INV-8849
+  supplierId: string;
+  supplierName: string;
+  supplierCompany: string;
+  supplierPhone: string;
+  supplierEmail?: string;
+  supplierAddress?: string;
+  purchaseDate: string;
+  items: PurchaseItem[];
+  subtotal: number;
+  taxRate: number;
+  taxAmount: number;
+  discount: number;
+  shippingCost: number;
+  grandTotal: number;
+  paidAmount: number;
+  dueAmount: number;
+  paymentStatus: PurchasePaymentStatus;
+  paymentMethod: 'Cash' | 'Bank Transfer' | 'bKash/Nagad' | 'Cheque';
+  status: PurchaseStatus;
+  notes?: string;
+  createdAt?: string;
+}
 
 export interface FieldDispatchItem {
   id: string;

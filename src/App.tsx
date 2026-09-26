@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
-import { Product, Customer, Document, BusinessSettings, DocumentType, StaffUser, PermissionKey, FieldDispatch } from './types';
+import { Product, Customer, Document, BusinessSettings, DocumentType, StaffUser, PermissionKey, FieldDispatch, Supplier, Purchase } from './types';
 import { 
   DEFAULT_SETTINGS, 
   INITIAL_PRODUCTS, 
   INITIAL_CUSTOMERS, 
   INITIAL_DOCUMENTS,
   INITIAL_STAFF_USERS,
-  INITIAL_FIELD_DISPATCHES
+  INITIAL_FIELD_DISPATCHES,
+  INITIAL_SUPPLIERS,
+  INITIAL_PURCHASES
 } from './initialData';
 
 // Component imports
@@ -16,6 +18,7 @@ import AdminLogin from './components/AdminLogin';
 import PrintDocument from './components/PrintDocument';
 import DashboardOverview from './components/DashboardOverview';
 import InventoryManager from './components/InventoryManager';
+import PurchasesView from './components/PurchasesView';
 import DocumentCreator from './components/DocumentCreator';
 import DocumentList from './components/DocumentList';
 import ReportsHub from './components/ReportsHub';
@@ -68,6 +71,12 @@ import {
   apiGetFieldDispatches,
   apiSaveFieldDispatch,
   apiDeleteFieldDispatch,
+  apiGetSuppliers,
+  apiSaveSupplier,
+  apiDeleteSupplier,
+  apiGetPurchases,
+  apiSavePurchase,
+  apiDeletePurchase,
   apiCheckDatabaseHealth,
   DbHealthResult
 } from './lib/api';
@@ -95,6 +104,8 @@ export default function App() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [dispatches, setDispatches] = useState<FieldDispatch[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [settings, setSettings] = useState<BusinessSettings>(DEFAULT_SETTINGS);
 
   // Focus workflows
@@ -144,20 +155,26 @@ export default function App() {
     const cachedCusts = localStorage.getItem('hsc_customers');
     const cachedDocs = localStorage.getItem('hsc_documents');
     const cachedDispatches = localStorage.getItem('hsc_dispatches');
+    const cachedSuppliers = localStorage.getItem('hsc_suppliers');
+    const cachedPurchases = localStorage.getItem('hsc_purchases');
 
     if (cachedProds) setProducts(JSON.parse(cachedProds));
     if (cachedCusts) setCustomers(JSON.parse(cachedCusts));
     if (cachedDocs) setDocuments(JSON.parse(cachedDocs));
     if (cachedDispatches) setDispatches(JSON.parse(cachedDispatches));
+    if (cachedSuppliers) setSuppliers(JSON.parse(cachedSuppliers));
+    if (cachedPurchases) setPurchases(JSON.parse(cachedPurchases));
 
     try {
-      const [prods, custs, docs, staff, setts, disps] = await Promise.all([
+      const [prods, custs, docs, staff, setts, disps, sups, purs] = await Promise.all([
         apiGetProducts().catch(() => cachedProds ? JSON.parse(cachedProds) : INITIAL_PRODUCTS),
         apiGetCustomers().catch(() => cachedCusts ? JSON.parse(cachedCusts) : INITIAL_CUSTOMERS),
         apiGetDocuments().catch(() => cachedDocs ? JSON.parse(cachedDocs) : INITIAL_DOCUMENTS),
         apiGetStaff().catch(() => INITIAL_STAFF_USERS),
         apiGetSettings().catch(() => DEFAULT_SETTINGS),
-        apiGetFieldDispatches().catch(() => cachedDispatches ? JSON.parse(cachedDispatches) : INITIAL_FIELD_DISPATCHES)
+        apiGetFieldDispatches().catch(() => cachedDispatches ? JSON.parse(cachedDispatches) : INITIAL_FIELD_DISPATCHES),
+        apiGetSuppliers().catch(() => cachedSuppliers ? JSON.parse(cachedSuppliers) : INITIAL_SUPPLIERS),
+        apiGetPurchases().catch(() => cachedPurchases ? JSON.parse(cachedPurchases) : INITIAL_PURCHASES),
       ]);
 
       if (prods && prods.length > 0) {
@@ -186,6 +203,20 @@ export default function App() {
         localStorage.setItem('hsc_dispatches', JSON.stringify(disps));
       } else if (!cachedDispatches) {
         setDispatches(INITIAL_FIELD_DISPATCHES);
+      }
+
+      if (sups && sups.length > 0) {
+        setSuppliers(sups);
+        localStorage.setItem('hsc_suppliers', JSON.stringify(sups));
+      } else if (!cachedSuppliers) {
+        setSuppliers(INITIAL_SUPPLIERS);
+      }
+
+      if (purs && purs.length > 0) {
+        setPurchases(purs);
+        localStorage.setItem('hsc_purchases', JSON.stringify(purs));
+      } else if (!cachedPurchases) {
+        setPurchases(INITIAL_PURCHASES);
       }
 
       setStaffUsers(staff.length > 0 ? staff : INITIAL_STAFF_USERS);
@@ -230,6 +261,10 @@ export default function App() {
         apiGetSettings().then(s => { setSettings(s); setSettingsForm(s); }).catch(() => {});
       } else if (change.entity === 'dispatches') {
         apiGetFieldDispatches().then(setDispatches).catch(() => {});
+      } else if (change.entity === 'suppliers') {
+        apiGetSuppliers().then(setSuppliers).catch(() => {});
+      } else if (change.entity === 'purchases') {
+        apiGetPurchases().then(setPurchases).catch(() => {});
       }
     });
 
@@ -488,6 +523,101 @@ export default function App() {
     }
   };
 
+  // Supplier CRUD Handlers
+  const handleSaveSupplier = async (supplier: Supplier) => {
+    const existingIndex = suppliers.findIndex(s => s.id === supplier.id);
+    let list: Supplier[];
+    if (existingIndex >= 0) {
+      list = [...suppliers];
+      list[existingIndex] = supplier;
+    } else {
+      list = [supplier, ...suppliers];
+    }
+    setSuppliers(list);
+    localStorage.setItem('hsc_suppliers', JSON.stringify(list));
+    try {
+      await apiSaveSupplier(supplier);
+    } catch (e) {
+      console.warn('Backend sync warning for supplier:', e);
+    }
+  };
+
+  const handleDeleteSupplier = async (id: string) => {
+    const list = suppliers.filter(s => s.id !== id);
+    setSuppliers(list);
+    localStorage.setItem('hsc_suppliers', JSON.stringify(list));
+    try {
+      await apiDeleteSupplier(id);
+    } catch (e) {
+      console.warn('Backend sync warning for delete supplier:', e);
+    }
+  };
+
+  // Purchase Entry & Stock Inward Handlers
+  const handleSavePurchase = async (purchase: Purchase, updateStock: boolean) => {
+    const existingIndex = purchases.findIndex(p => p.id === purchase.id);
+    let list: Purchase[];
+    if (existingIndex >= 0) {
+      list = [...purchases];
+      list[existingIndex] = purchase;
+    } else {
+      list = [purchase, ...purchases];
+    }
+    setPurchases(list);
+    localStorage.setItem('hsc_purchases', JSON.stringify(list));
+
+    // Automatically increase inventory stock if requested
+    if (updateStock && purchase.status === 'Received') {
+      const updatedProducts = products.map(prod => {
+        const item = purchase.items.find(it => it.productId === prod.id);
+        if (item && item.quantity > 0) {
+          const updatedProd = {
+            ...prod,
+            stock: prod.stock + item.quantity
+          };
+          apiSaveProduct(updatedProd).catch(() => {});
+          return updatedProd;
+        }
+        return prod;
+      });
+      setProducts(updatedProducts);
+      localStorage.setItem('hsc_products', JSON.stringify(updatedProducts));
+    }
+
+    try {
+      await apiSavePurchase(purchase);
+    } catch (e) {
+      console.warn('Backend sync warning for purchase:', e);
+    }
+  };
+
+  const handleDeletePurchase = async (id: string) => {
+    const list = purchases.filter(p => p.id !== id);
+    setPurchases(list);
+    localStorage.setItem('hsc_purchases', JSON.stringify(list));
+    try {
+      await apiDeletePurchase(id);
+    } catch (e) {
+      console.warn('Backend sync warning for delete purchase:', e);
+    }
+  };
+
+  const handleUpdateProductStock = async (productId: string, quantityDelta: number) => {
+    const updatedProducts = products.map(prod => {
+      if (prod.id === productId) {
+        const updated = {
+          ...prod,
+          stock: Math.max(0, prod.stock + quantityDelta)
+        };
+        apiSaveProduct(updated).catch(() => {});
+        return updated;
+      }
+      return prod;
+    });
+    setProducts(updatedProducts);
+    localStorage.setItem('hsc_products', JSON.stringify(updatedProducts));
+  };
+
   // HANDLER FOR SETTINGS SAVE
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -606,6 +736,21 @@ export default function App() {
                   >
                     <ShoppingCart className="w-4 h-4" />
                     Stock Inventory
+                  </button>
+                )}
+
+                {/* Tab: Purchases / Stock Inward */}
+                {hasPermission('view_purchases') && (
+                  <button
+                    onClick={() => { setActiveTab('purchases'); setEditingDocument(null); setIsCreatingDoc(null); }}
+                    className={`w-full flex items-center gap-2.5 px-3.5 py-3 rounded-lg transition-all text-left cursor-pointer ${
+                      activeTab === 'purchases'
+                        ? 'bg-emerald-600 text-white font-extrabold shadow-sm'
+                        : 'hover:bg-slate-800 hover:text-slate-100'
+                    }`}
+                  >
+                    <ShoppingCart className="w-4 h-4 text-emerald-400" />
+                    Purchase Entry (ক্রয়)
                   </button>
                 )}
 
@@ -839,6 +984,22 @@ export default function App() {
                       onUpdateProduct={handleUpdateProduct}
                       onDeleteProduct={handleDeleteProduct}
                       onViewDocument={(doc) => setViewingDocument(doc)}
+                    />
+                  )}
+
+                  {/* TAB PANEL 2b: Purchases & Inward Stock Management */}
+                  {activeTab === 'purchases' && hasPermission('view_purchases') && (
+                    <PurchasesView 
+                      purchases={purchases}
+                      suppliers={suppliers}
+                      products={products}
+                      settings={settings}
+                      currentUser={currentUser}
+                      onSavePurchase={handleSavePurchase}
+                      onDeletePurchase={handleDeletePurchase}
+                      onSaveSupplier={handleSaveSupplier}
+                      onDeleteSupplier={handleDeleteSupplier}
+                      onUpdateProductStock={handleUpdateProductStock}
                     />
                   )}
 

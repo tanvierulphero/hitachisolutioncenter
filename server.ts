@@ -5,9 +5,9 @@ import path from 'path';
 import multer from 'multer';
 import { Server as SocketIOServer } from 'socket.io';
 import { db } from './src/db/index.ts';
-import { products, customers, documents, staffUsers, settings, fieldDispatches } from './src/db/schema.ts';
+import { products, customers, documents, staffUsers, settings, fieldDispatches, suppliers, purchases } from './src/db/schema.ts';
 import { eq } from 'drizzle-orm';
-import { INITIAL_PRODUCTS, INITIAL_CUSTOMERS, INITIAL_DOCUMENTS, INITIAL_STAFF_USERS, DEFAULT_SETTINGS, INITIAL_FIELD_DISPATCHES } from './src/initialData.ts';
+import { INITIAL_PRODUCTS, INITIAL_CUSTOMERS, INITIAL_DOCUMENTS, INITIAL_STAFF_USERS, DEFAULT_SETTINGS, INITIAL_FIELD_DISPATCHES, INITIAL_SUPPLIERS, INITIAL_PURCHASES } from './src/initialData.ts';
 
 const app = express();
 const port = 3000;
@@ -105,6 +105,52 @@ async function initDbMigrations() {
       );
     `).catch(() => {});
 
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS suppliers (
+        id text PRIMARY KEY NOT NULL,
+        supplier_id text DEFAULT '',
+        name text NOT NULL,
+        company text DEFAULT '',
+        phone text NOT NULL,
+        email text DEFAULT '',
+        address text DEFAULT '',
+        contact_person text DEFAULT '',
+        notes text DEFAULT '',
+        created_at text DEFAULT '',
+        updated_at timestamp DEFAULT now()
+      );
+    `).catch(() => {});
+
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS purchases (
+        id text PRIMARY KEY NOT NULL,
+        purchase_number text NOT NULL,
+        supplier_invoice_no text DEFAULT '',
+        supplier_id text NOT NULL,
+        supplier_name text NOT NULL,
+        supplier_company text DEFAULT '',
+        supplier_phone text DEFAULT '',
+        supplier_email text DEFAULT '',
+        supplier_address text DEFAULT '',
+        purchase_date text NOT NULL,
+        items jsonb DEFAULT '[]'::jsonb,
+        subtotal real NOT NULL DEFAULT 0,
+        tax_rate real DEFAULT 0,
+        tax_amount real DEFAULT 0,
+        discount real DEFAULT 0,
+        shipping_cost real DEFAULT 0,
+        grand_total real NOT NULL DEFAULT 0,
+        paid_amount real DEFAULT 0,
+        due_amount real DEFAULT 0,
+        payment_status text NOT NULL,
+        payment_method text NOT NULL,
+        status text NOT NULL,
+        notes text DEFAULT '',
+        created_at text DEFAULT '',
+        updated_at timestamp DEFAULT now()
+      );
+    `).catch(() => {});
+
     await db.execute(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS company_id text DEFAULT '';`).catch(() => {});
     await db.execute(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS notes text DEFAULT '';`).catch(() => {});
   } catch (err) {
@@ -133,6 +179,22 @@ async function seedInitialDataIfNeeded() {
       console.log('Seeding initial customers into Cloud SQL...');
       for (const c of INITIAL_CUSTOMERS) {
         await db.insert(customers).values(c).onConflictDoNothing();
+      }
+    }
+
+    const existingSuppliers = await db.select().from(suppliers).limit(1);
+    if (existingSuppliers.length === 0) {
+      console.log('Seeding initial suppliers into Cloud SQL...');
+      for (const s of INITIAL_SUPPLIERS) {
+        await db.insert(suppliers).values(s).onConflictDoNothing();
+      }
+    }
+
+    const existingPurchases = await db.select().from(purchases).limit(1);
+    if (existingPurchases.length === 0) {
+      console.log('Seeding initial purchases into Cloud SQL...');
+      for (const p of INITIAL_PURCHASES) {
+        await db.insert(purchases).values(p).onConflictDoNothing();
       }
     }
 
@@ -505,7 +567,125 @@ app.delete('/api/field-dispatches/:id', async (req, res) => {
   }
 });
 
-// 7. Database & Server Health Diagnostics Check
+// 7. Suppliers
+app.get('/api/suppliers', async (_req, res) => {
+  try {
+    await seedInitialDataIfNeeded();
+    const result = await db.select().from(suppliers);
+    res.json(result);
+  } catch (err: any) {
+    console.error('Failed to fetch suppliers:', err);
+    res.status(500).json({ error: err.message || 'Failed to fetch suppliers' });
+  }
+});
+
+app.post('/api/suppliers', async (req, res) => {
+  try {
+    const item = req.body;
+    if (!item.id) {
+      return res.status(400).json({ error: 'Missing supplier ID' });
+    }
+    await db.insert(suppliers).values(item).onConflictDoUpdate({
+      target: suppliers.id,
+      set: {
+        supplierId: item.supplierId || '',
+        name: item.name,
+        company: item.company || '',
+        phone: item.phone,
+        email: item.email || '',
+        address: item.address || '',
+        contactPerson: item.contactPerson || '',
+        notes: item.notes || '',
+        createdAt: item.createdAt || '',
+      },
+    });
+    notifyChange('suppliers', 'save', item);
+    res.json(item);
+  } catch (err: any) {
+    console.error('Failed to save supplier:', err);
+    res.status(500).json({ error: err.message || 'Failed to save supplier' });
+  }
+});
+
+app.delete('/api/suppliers/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.delete(suppliers).where(eq(suppliers.id, id));
+    notifyChange('suppliers', 'delete', { id });
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('Failed to delete supplier:', err);
+    res.status(500).json({ error: err.message || 'Failed to delete supplier' });
+  }
+});
+
+// 8. Purchases / Stock Inward
+app.get('/api/purchases', async (_req, res) => {
+  try {
+    await seedInitialDataIfNeeded();
+    const result = await db.select().from(purchases);
+    res.json(result);
+  } catch (err: any) {
+    console.error('Failed to fetch purchases:', err);
+    res.status(500).json({ error: err.message || 'Failed to fetch purchases' });
+  }
+});
+
+app.post('/api/purchases', async (req, res) => {
+  try {
+    const item = req.body;
+    if (!item.id) {
+      return res.status(400).json({ error: 'Missing purchase ID' });
+    }
+    await db.insert(purchases).values(item).onConflictDoUpdate({
+      target: purchases.id,
+      set: {
+        purchaseNumber: item.purchaseNumber,
+        supplierInvoiceNo: item.supplierInvoiceNo || '',
+        supplierId: item.supplierId,
+        supplierName: item.supplierName,
+        supplierCompany: item.supplierCompany || '',
+        supplierPhone: item.supplierPhone || '',
+        supplierEmail: item.supplierEmail || '',
+        supplierAddress: item.supplierAddress || '',
+        purchaseDate: item.purchaseDate,
+        items: item.items || [],
+        subtotal: item.subtotal,
+        taxRate: item.taxRate || 0,
+        taxAmount: item.taxAmount || 0,
+        discount: item.discount || 0,
+        shippingCost: item.shippingCost || 0,
+        grandTotal: item.grandTotal,
+        paidAmount: item.paidAmount || 0,
+        dueAmount: item.dueAmount || 0,
+        paymentStatus: item.paymentStatus,
+        paymentMethod: item.paymentMethod,
+        status: item.status,
+        notes: item.notes || '',
+        createdAt: item.createdAt || '',
+      },
+    });
+    notifyChange('purchases', 'save', item);
+    res.json(item);
+  } catch (err: any) {
+    console.error('Failed to save purchase:', err);
+    res.status(500).json({ error: err.message || 'Failed to save purchase' });
+  }
+});
+
+app.delete('/api/purchases/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.delete(purchases).where(eq(purchases.id, id));
+    notifyChange('purchases', 'delete', { id });
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('Failed to delete purchase:', err);
+    res.status(500).json({ error: err.message || 'Failed to delete purchase' });
+  }
+});
+
+// 9. Database & Server Health Diagnostics Check
 app.get('/api/health', async (_req, res) => {
   const startTime = Date.now();
   try {
@@ -515,12 +695,16 @@ app.get('/api/health', async (_req, res) => {
     const dCountRes: any = await db.execute(`SELECT COUNT(*) as count FROM documents;`);
     const sCountRes: any = await db.execute(`SELECT COUNT(*) as count FROM staff_users;`);
     const fCountRes: any = await db.execute(`SELECT COUNT(*) as count FROM field_dispatches;`);
+    const supCountRes: any = await db.execute(`SELECT COUNT(*) as count FROM suppliers;`).catch(() => ({ rows: [{ count: 0 }] }));
+    const purCountRes: any = await db.execute(`SELECT COUNT(*) as count FROM purchases;`).catch(() => ({ rows: [{ count: 0 }] }));
 
     const pCount = pCountRes?.rows?.[0]?.count ?? pCountRes?.[0]?.count ?? 0;
     const cCount = cCountRes?.rows?.[0]?.count ?? cCountRes?.[0]?.count ?? 0;
     const dCount = dCountRes?.rows?.[0]?.count ?? dCountRes?.[0]?.count ?? 0;
     const sCount = sCountRes?.rows?.[0]?.count ?? sCountRes?.[0]?.count ?? 0;
     const fCount = fCountRes?.rows?.[0]?.count ?? fCountRes?.[0]?.count ?? 0;
+    const supCount = supCountRes?.rows?.[0]?.count ?? supCountRes?.[0]?.count ?? 0;
+    const purCount = purCountRes?.rows?.[0]?.count ?? purCountRes?.[0]?.count ?? 0;
 
     const latency = Date.now() - startTime;
     res.json({
@@ -534,6 +718,8 @@ app.get('/api/health', async (_req, res) => {
         documents: Number(dCount),
         staff_users: Number(sCount),
         field_dispatches: Number(fCount),
+        suppliers: Number(supCount),
+        purchases: Number(purCount),
       },
       uploadsFolderWritable: fs.existsSync(uploadsDir),
       timestamp: new Date().toISOString(),

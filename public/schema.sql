@@ -161,4 +161,63 @@ CREATE TABLE `field_dispatches` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 7. Table: suppliers
+DROP TABLE IF EXISTS `suppliers`;
+CREATE TABLE `suppliers` (
+  `id` VARCHAR(128) NOT NULL,
+  `supplier_id` VARCHAR(100) DEFAULT '',
+  `name` VARCHAR(255) NOT NULL,
+  `company` VARCHAR(255) DEFAULT '',
+  `phone` VARCHAR(100) NOT NULL,
+  `email` VARCHAR(255) DEFAULT '',
+  `address` TEXT,
+  `contact_person` VARCHAR(255) DEFAULT '',
+  `notes` TEXT,
+  `created_at` VARCHAR(50) DEFAULT '',
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Seed Suppliers Data
+INSERT INTO `suppliers` (`id`, `supplier_id`, `name`, `company`, `phone`, `email`, `address`, `contact_person`, `notes`, `created_at`) VALUES
+('sup-1', 'SUP-1001', 'Mahmudur Rahman', 'Hitachi Air Solutions Japan & Singapore Regional Hub', '01711-554433', 'supply@hitachi-regional.com', 'Motijheel C/A, Dhaka-1000.', 'Engr. Mahmud', 'Main authorized importer & OEM spare parts supplier.', '2026-01-05'),
+('sup-2', 'SUP-1002', 'Sajjadul Karim', 'Atlas Industrial Lubricants & Machinery Corp.', '01819-223311', 'sales@atlas-lubricants.bd', 'Tejgaon I/A, Dhaka-1208.', 'Sajjadul Karim', 'Synthetic Compressor Oils & Air Filters supplier.', '2026-01-20'),
+('sup-3', 'SUP-1003', 'Kabir Hossain', 'Pneumatic Valves & Dryer Parts Trading', '01912-778899', 'kabir@pneumaticparts.com', 'Nawabpur Road, Dhaka.', 'Kabir Hossain', 'Local hardware, valves, gauges & fittings vendor.', '2026-02-10');
+
+-- 8. Table: purchases
+DROP TABLE IF EXISTS `purchases`;
+CREATE TABLE `purchases` (
+  `id` VARCHAR(128) NOT NULL,
+  `purchase_number` VARCHAR(100) NOT NULL,
+  `supplier_invoice_no` VARCHAR(100) DEFAULT '',
+  `supplier_id` VARCHAR(128) NOT NULL,
+  `supplier_name` VARCHAR(255) NOT NULL,
+  `supplier_company` VARCHAR(255) DEFAULT '',
+  `supplier_phone` VARCHAR(100) DEFAULT '',
+  `supplier_email` VARCHAR(255) DEFAULT '',
+  `supplier_address` TEXT,
+  `purchase_date` VARCHAR(50) NOT NULL,
+  `items` LONGTEXT,
+  `subtotal` DOUBLE NOT NULL DEFAULT 0,
+  `tax_rate` DOUBLE DEFAULT 0,
+  `tax_amount` DOUBLE DEFAULT 0,
+  `discount` DOUBLE DEFAULT 0,
+  `shipping_cost` DOUBLE DEFAULT 0,
+  `grand_total` DOUBLE NOT NULL DEFAULT 0,
+  `paid_amount` DOUBLE DEFAULT 0,
+  `due_amount` DOUBLE DEFAULT 0,
+  `payment_status` VARCHAR(50) NOT NULL,
+  `payment_method` VARCHAR(100) NOT NULL,
+  `status` VARCHAR(50) NOT NULL,
+  `notes` TEXT,
+  `created_at` VARCHAR(50) DEFAULT '',
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Seed Purchases Data
+INSERT INTO `purchases` (`id`, `purchase_number`, `supplier_invoice_no`, `supplier_id`, `supplier_name`, `supplier_company`, `supplier_phone`, `supplier_email`, `supplier_address`, `purchase_date`, `items`, `subtotal`, `tax_rate`, `tax_amount`, `discount`, `shipping_cost`, `grand_total`, `paid_amount`, `due_amount`, `payment_status`, `payment_method`, `status`, `notes`, `created_at`) VALUES
+('pur-2026-001', 'PUR/2026/0001', 'INV-HIT-8821', 'sup-1', 'Mahmudur Rahman', 'Hitachi Air Solutions Japan & Singapore Regional Hub', '01711-554433', 'supply@hitachi-regional.com', 'Motijheel C/A, Dhaka-1000.', '2026-09-10', '[{"id":"pur-item-1","productId":"prod-1","productName":"Hitachi Hiscrew 37 S-Type Screw Compressor","sku":"HIT-HS-37S","brand":"Hitachi","unit":"Set","quantity":2,"unitCost":520000,"totalCost":1040000},{"id":"pur-item-2","productId":"prod-5","productName":"Genuine Air Filter for Hitachi 22kW Compressor","sku":"HIT-AF-22K","brand":"Hitachi","unit":"Pcs","quantity":20,"unitCost":8500,"totalCost":170000}]', 1210000, 0, 0, 10000, 5000, 1205000, 1205000, 0, 'Paid', 'Bank Transfer', 'Received', 'Direct container delivery at Gazipur showroom.', '2026-09-10'),
+('pur-2026-002', 'PUR/2026/0002', 'ATL-9920', 'sup-2', 'Sajjadul Karim', 'Atlas Industrial Lubricants & Machinery Corp.', '01819-223311', 'sales@atlas-lubricants.bd', 'Tejgaon I/A, Dhaka-1208.', '2026-09-20', '[{"id":"pur-item-3","productId":"prod-7","productName":"Hitachi Screw Compressor Lubricant Oil (Food Grade)","sku":"HIT-OIL-FG","brand":"Hitachi","unit":"Can (20L)","quantity":10,"unitCost":36000,"totalCost":360000},{"id":"pur-item-4","productId":"prod-6","productName":"Genuine Oil Separator Element AC-GA37","sku":"AC-OS-GA37","brand":"Atlas Copco","unit":"Pcs","quantity":15,"unitCost":18000,"totalCost":270000}]', 630000, 0, 0, 5000, 2000, 627000, 300000, 327000, 'Partial', 'Cheque', 'Received', 'Advance 300k paid. Remaining 327k due on 30-day supplier credit.', '2026-09-20');
+
 SET FOREIGN_KEY_CHECKS = 1;

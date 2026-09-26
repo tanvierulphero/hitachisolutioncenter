@@ -148,3 +148,57 @@ export const fieldDispatches = pgTable('field_dispatches', {
   }[]>().default([]),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
+
+// Suppliers / Vendors table
+export const suppliers = pgTable('suppliers', {
+  id: text('id').primaryKey(),
+  supplierId: text('supplier_id').default(''),
+  name: text('name').notNull(),
+  company: text('company').default(''),
+  phone: text('phone').notNull(),
+  email: text('email').default(''),
+  address: text('address').default(''),
+  contactPerson: text('contact_person').default(''),
+  notes: text('notes').default(''),
+  createdAt: text('created_at').default(''),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// Purchases / Stock Inward table
+export const purchases = pgTable('purchases', {
+  id: text('id').primaryKey(),
+  purchaseNumber: text('purchase_number').notNull(),
+  supplierInvoiceNo: text('supplier_invoice_no').default(''),
+  supplierId: text('supplier_id').notNull(),
+  supplierName: text('supplier_name').notNull(),
+  supplierCompany: text('supplier_company').default(''),
+  supplierPhone: text('supplier_phone').default(''),
+  supplierEmail: text('supplier_email').default(''),
+  supplierAddress: text('supplier_address').default(''),
+  purchaseDate: text('purchase_date').notNull(),
+  items: jsonb('items').$type<{
+    id: string;
+    productId: string;
+    productName: string;
+    sku?: string;
+    brand?: string;
+    unit: string;
+    quantity: number;
+    unitCost: number;
+    totalCost: number;
+  }[]>().default([]),
+  subtotal: real('subtotal').notNull(),
+  taxRate: real('tax_rate').default(0),
+  taxAmount: real('tax_amount').default(0),
+  discount: real('discount').default(0),
+  shippingCost: real('shipping_cost').default(0),
+  grandTotal: real('grand_total').notNull(),
+  paidAmount: real('paid_amount').default(0),
+  dueAmount: real('due_amount').default(0),
+  paymentStatus: text('payment_status').notNull(), // 'Paid' | 'Partial' | 'Due'
+  paymentMethod: text('payment_method').notNull(), // 'Cash' | 'Bank Transfer' | 'bKash/Nagad' | 'Cheque'
+  status: text('status').notNull(), // 'Received' | 'Ordered' | 'Pending' | 'Cancelled'
+  notes: text('notes').default(''),
+  createdAt: text('created_at').default(''),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});

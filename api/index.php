@@ -391,7 +391,223 @@ try {
             break;
 
         // ----------------------------------------------------
-        // 6. IMAGE UPLOAD API
+        // 6. FIELD DISPATCHES API
+        // ----------------------------------------------------
+        case 'field-dispatches':
+            if ($method === 'GET') {
+                $stmt = $pdo->query("SELECT * FROM field_dispatches ORDER BY dispatch_date DESC");
+                $results = [];
+                while ($row = $stmt->fetch()) {
+                    $results[] = [
+                        'id' => $row['id'],
+                        'dispatchNumber' => $row['dispatch_number'],
+                        'staffId' => $row['staff_id'],
+                        'staffName' => $row['staff_name'],
+                        'customerId' => $row['customer_id'],
+                        'customerName' => $row['customer_name'],
+                        'customerCompany' => $row['customer_company'],
+                        'customerPhone' => $row['customer_phone'],
+                        'purpose' => $row['purpose'],
+                        'dispatchDate' => $row['dispatch_date'],
+                        'returnDate' => $row['return_date'],
+                        'status' => $row['status'],
+                        'notes' => $row['notes'],
+                        'items' => json_decode($row['items'] ?: '[]', true)
+                    ];
+                }
+                echo json_encode($results);
+            } elseif ($method === 'POST') {
+                $stmt = $pdo->prepare("
+                    INSERT INTO field_dispatches (
+                        id, dispatch_number, staff_id, staff_name, customer_id, customer_name,
+                        customer_company, customer_phone, purpose, dispatch_date, return_date, status, notes, items
+                    ) VALUES (
+                        :id, :dispatch_number, :staff_id, :staff_name, :customer_id, :customer_name,
+                        :customer_company, :customer_phone, :purpose, :dispatch_date, :return_date, :status, :notes, :items
+                    ) ON DUPLICATE KEY UPDATE
+                        dispatch_number = VALUES(dispatch_number), staff_id = VALUES(staff_id),
+                        staff_name = VALUES(staff_name), customer_id = VALUES(customer_id),
+                        customer_name = VALUES(customer_name), customer_company = VALUES(customer_company),
+                        customer_phone = VALUES(customer_phone), purpose = VALUES(purpose),
+                        dispatch_date = VALUES(dispatch_date), return_date = VALUES(return_date),
+                        status = VALUES(status), notes = VALUES(notes), items = VALUES(items)
+                ");
+                $stmt->execute([
+                    ':id' => $inputData['id'],
+                    ':dispatch_number' => $inputData['dispatchNumber'],
+                    ':staff_id' => $inputData['staffId'],
+                    ':staff_name' => $inputData['staffName'],
+                    ':customer_id' => $inputData['customerId'],
+                    ':customer_name' => $inputData['customerName'],
+                    ':customer_company' => $inputData['customerCompany'] ?? '',
+                    ':customer_phone' => $inputData['customerPhone'] ?? '',
+                    ':purpose' => $inputData['purpose'] ?? '',
+                    ':dispatch_date' => $inputData['dispatchDate'],
+                    ':return_date' => $inputData['returnDate'] ?? null,
+                    ':status' => $inputData['status'],
+                    ':notes' => $inputData['notes'] ?? '',
+                    ':items' => json_encode($inputData['items'] ?? [])
+                ]);
+                echo json_encode($inputData);
+            } elseif ($method === 'DELETE') {
+                $stmt = $pdo->prepare("DELETE FROM field_dispatches WHERE id = :id");
+                $stmt->execute([':id' => $id]);
+                echo json_encode(['success' => true]);
+            }
+            break;
+
+        // ----------------------------------------------------
+        // 7. SUPPLIERS API
+        // ----------------------------------------------------
+        case 'suppliers':
+            if ($method === 'GET') {
+                $stmt = $pdo->query("SELECT * FROM suppliers ORDER BY name ASC");
+                $results = [];
+                while ($row = $stmt->fetch()) {
+                    $results[] = [
+                        'id' => $row['id'],
+                        'supplierId' => $row['supplier_id'] ?? '',
+                        'name' => $row['name'],
+                        'company' => $row['company'],
+                        'phone' => $row['phone'],
+                        'email' => $row['email'],
+                        'address' => $row['address'],
+                        'contactPerson' => $row['contact_person'] ?? '',
+                        'notes' => $row['notes'] ?? '',
+                        'createdAt' => $row['created_at'] ?? ''
+                    ];
+                }
+                echo json_encode($results);
+            } elseif ($method === 'POST') {
+                $stmt = $pdo->prepare("
+                    INSERT INTO suppliers (
+                        id, supplier_id, name, company, phone, email, address, contact_person, notes, created_at
+                    ) VALUES (
+                        :id, :supplier_id, :name, :company, :phone, :email, :address, :contact_person, :notes, :created_at
+                    ) ON DUPLICATE KEY UPDATE
+                        supplier_id = VALUES(supplier_id), name = VALUES(name), company = VALUES(company),
+                        phone = VALUES(phone), email = VALUES(email), address = VALUES(address),
+                        contact_person = VALUES(contact_person), notes = VALUES(notes)
+                ");
+                $stmt->execute([
+                    ':id' => $inputData['id'],
+                    ':supplier_id' => $inputData['supplierId'] ?? '',
+                    ':name' => $inputData['name'],
+                    ':company' => $inputData['company'] ?? '',
+                    ':phone' => $inputData['phone'],
+                    ':email' => $inputData['email'] ?? '',
+                    ':address' => $inputData['address'] ?? '',
+                    ':contact_person' => $inputData['contactPerson'] ?? '',
+                    ':notes' => $inputData['notes'] ?? '',
+                    ':created_at' => $inputData['createdAt'] ?? date('Y-m-d')
+                ]);
+                echo json_encode($inputData);
+            } elseif ($method === 'DELETE') {
+                $stmt = $pdo->prepare("DELETE FROM suppliers WHERE id = :id");
+                $stmt->execute([':id' => $id]);
+                echo json_encode(['success' => true]);
+            }
+            break;
+
+        // ----------------------------------------------------
+        // 8. PURCHASES / STOCK INWARD API
+        // ----------------------------------------------------
+        case 'purchases':
+            if ($method === 'GET') {
+                $stmt = $pdo->query("SELECT * FROM purchases ORDER BY purchase_date DESC");
+                $results = [];
+                while ($row = $stmt->fetch()) {
+                    $results[] = [
+                        'id' => $row['id'],
+                        'purchaseNumber' => $row['purchase_number'],
+                        'supplierInvoiceNo' => $row['supplier_invoice_no'] ?? '',
+                        'supplierId' => $row['supplier_id'],
+                        'supplierName' => $row['supplier_name'],
+                        'supplierCompany' => $row['supplier_company'],
+                        'supplierPhone' => $row['supplier_phone'],
+                        'supplierEmail' => $row['supplier_email'] ?? '',
+                        'supplierAddress' => $row['supplier_address'] ?? '',
+                        'purchaseDate' => $row['purchase_date'],
+                        'items' => json_decode($row['items'] ?: '[]', true),
+                        'subtotal' => (float)$row['subtotal'],
+                        'taxRate' => (float)$row['tax_rate'],
+                        'taxAmount' => (float)$row['tax_amount'],
+                        'discount' => (float)$row['discount'],
+                        'shippingCost' => (float)($row['shipping_cost'] ?? 0),
+                        'grandTotal' => (float)$row['grand_total'],
+                        'paidAmount' => (float)$row['paid_amount'],
+                        'dueAmount' => (float)$row['due_amount'],
+                        'paymentStatus' => $row['payment_status'],
+                        'paymentMethod' => $row['payment_method'],
+                        'status' => $row['status'],
+                        'notes' => $row['notes'] ?? '',
+                        'createdAt' => $row['created_at'] ?? ''
+                    ];
+                }
+                echo json_encode($results);
+            } elseif ($method === 'POST') {
+                $stmt = $pdo->prepare("
+                    INSERT INTO purchases (
+                        id, purchase_number, supplier_invoice_no, supplier_id, supplier_name,
+                        supplier_company, supplier_phone, supplier_email, supplier_address,
+                        purchase_date, items, subtotal, tax_rate, tax_amount, discount,
+                        shipping_cost, grand_total, paid_amount, due_amount, payment_status,
+                        payment_method, status, notes, created_at
+                    ) VALUES (
+                        :id, :purchase_number, :supplier_invoice_no, :supplier_id, :supplier_name,
+                        :supplier_company, :supplier_phone, :supplier_email, :supplier_address,
+                        :purchase_date, :items, :subtotal, :tax_rate, :tax_amount, :discount,
+                        :shipping_cost, :grand_total, :paid_amount, :due_amount, :payment_status,
+                        :payment_method, :status, :notes, :created_at
+                    ) ON DUPLICATE KEY UPDATE
+                        purchase_number = VALUES(purchase_number), supplier_invoice_no = VALUES(supplier_invoice_no),
+                        supplier_id = VALUES(supplier_id), supplier_name = VALUES(supplier_name),
+                        supplier_company = VALUES(supplier_company), supplier_phone = VALUES(supplier_phone),
+                        supplier_email = VALUES(supplier_email), supplier_address = VALUES(supplier_address),
+                        purchase_date = VALUES(purchase_date), items = VALUES(items),
+                        subtotal = VALUES(subtotal), tax_rate = VALUES(tax_rate),
+                        tax_amount = VALUES(tax_amount), discount = VALUES(discount),
+                        shipping_cost = VALUES(shipping_cost), grand_total = VALUES(grand_total),
+                        paid_amount = VALUES(paid_amount), due_amount = VALUES(due_amount),
+                        payment_status = VALUES(payment_status), payment_method = VALUES(payment_method),
+                        status = VALUES(status), notes = VALUES(notes)
+                ");
+                $stmt->execute([
+                    ':id' => $inputData['id'],
+                    ':purchase_number' => $inputData['purchaseNumber'],
+                    ':supplier_invoice_no' => $inputData['supplierInvoiceNo'] ?? '',
+                    ':supplier_id' => $inputData['supplierId'],
+                    ':supplier_name' => $inputData['supplierName'],
+                    ':supplier_company' => $inputData['supplierCompany'] ?? '',
+                    ':supplier_phone' => $inputData['supplierPhone'] ?? '',
+                    ':supplier_email' => $inputData['supplierEmail'] ?? '',
+                    ':supplier_address' => $inputData['supplierAddress'] ?? '',
+                    ':purchase_date' => $inputData['purchaseDate'],
+                    ':items' => json_encode($inputData['items'] ?? []),
+                    ':subtotal' => (float)$inputData['subtotal'],
+                    ':tax_rate' => (float)($inputData['taxRate'] ?? 0),
+                    ':tax_amount' => (float)($inputData['taxAmount'] ?? 0),
+                    ':discount' => (float)($inputData['discount'] ?? 0),
+                    ':shipping_cost' => (float)($inputData['shippingCost'] ?? 0),
+                    ':grand_total' => (float)$inputData['grandTotal'],
+                    ':paid_amount' => (float)($inputData['paidAmount'] ?? 0),
+                    ':due_amount' => (float)($inputData['dueAmount'] ?? 0),
+                    ':payment_status' => $inputData['paymentStatus'] ?? 'Paid',
+                    ':payment_method' => $inputData['paymentMethod'] ?? 'Cash',
+                    ':status' => $inputData['status'] ?? 'Received',
+                    ':notes' => $inputData['notes'] ?? '',
+                    ':created_at' => $inputData['createdAt'] ?? date('Y-m-d')
+                ]);
+                echo json_encode($inputData);
+            } elseif ($method === 'DELETE') {
+                $stmt = $pdo->prepare("DELETE FROM purchases WHERE id = :id");
+                $stmt->execute([':id' => $id]);
+                echo json_encode(['success' => true]);
+            }
+            break;
+
+        // ----------------------------------------------------
+        // 9. IMAGE UPLOAD API
         // ----------------------------------------------------
         case 'upload':
             $possibleUploadDirs = [
@@ -439,7 +655,7 @@ try {
             break;
 
         // ----------------------------------------------------
-        // 7. DATABASE & SERVER HEALTH CHECK
+        // 10. DATABASE & SERVER HEALTH CHECK
         // ----------------------------------------------------
         case 'health':
             $startTime = microtime(true);
@@ -448,6 +664,12 @@ try {
                 $cCount = $pdo->query("SELECT COUNT(*) FROM customers")->fetchColumn();
                 $dCount = $pdo->query("SELECT COUNT(*) FROM documents")->fetchColumn();
                 $sCount = $pdo->query("SELECT COUNT(*) FROM staff_users")->fetchColumn();
+                $fCount = 0;
+                $supCount = 0;
+                $purCount = 0;
+                try { $fCount = $pdo->query("SELECT COUNT(*) FROM field_dispatches")->fetchColumn(); } catch (Exception $e) {}
+                try { $supCount = $pdo->query("SELECT COUNT(*) FROM suppliers")->fetchColumn(); } catch (Exception $e) {}
+                try { $purCount = $pdo->query("SELECT COUNT(*) FROM purchases")->fetchColumn(); } catch (Exception $e) {}
                 
                 $uploadDir = __DIR__ . '/../uploads/';
                 $uploadsWritable = file_exists($uploadDir) && is_writable($uploadDir);
@@ -462,7 +684,10 @@ try {
                         'products' => (int)$pCount,
                         'customers' => (int)$cCount,
                         'documents' => (int)$dCount,
-                        'staff_users' => (int)$sCount
+                        'staff_users' => (int)$sCount,
+                        'field_dispatches' => (int)$fCount,
+                        'suppliers' => (int)$supCount,
+                        'purchases' => (int)$purCount
                     ],
                     'uploadsFolderWritable' => $uploadsWritable,
                     'timestamp' => date('c')
