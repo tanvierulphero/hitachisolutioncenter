@@ -1,4 +1,4 @@
-import { Product, Customer, Document, StaffUser, BusinessSettings, FieldDispatch, Supplier, Purchase } from '../types';
+import { Product, Customer, Document, StaffUser, BusinessSettings, FieldDispatch, Supplier, Purchase, SalesReturn } from '../types';
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   let response: Response;
@@ -138,6 +138,16 @@ export const apiSavePurchase = (purchase: Purchase): Promise<Purchase> =>
   });
 export const apiDeletePurchase = (id: string): Promise<{ success: boolean }> =>
   fetchJson<{ success: boolean }>(`/api/purchases/${id}`, { method: 'DELETE' });
+
+// Sales Returns / Restock API
+export const apiGetReturns = (): Promise<SalesReturn[]> => fetchJson<SalesReturn[]>('/api/returns');
+export const apiSaveReturn = (salesReturn: SalesReturn): Promise<SalesReturn> =>
+  fetchJson<SalesReturn>('/api/returns', {
+    method: 'POST',
+    body: JSON.stringify(salesReturn),
+  });
+export const apiDeleteReturn = (id: string): Promise<{ success: boolean }> =>
+  fetchJson<{ success: boolean }>(`/api/returns/${id}`, { method: 'DELETE' });
 
 // Helper to read and compress file as compact base64 data URL (max 800px, 70% JPEG quality)
 // Prevents cPanel LiteSpeed HTTP 503 errors caused by oversized POST payloads

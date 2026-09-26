@@ -42,6 +42,7 @@ export default function DocumentList({
       ALL: documents.length,
       OFFER_LETTER: documents.filter(d => d.type === 'OFFER_LETTER').length,
       QUOTATION: documents.filter(d => d.type === 'QUOTATION').length,
+      CHALLAN: documents.filter(d => d.type === 'CHALLAN').length,
       INVOICE: documents.filter(d => d.type === 'INVOICE').length,
       BILL: documents.filter(d => d.type === 'BILL').length,
     };
@@ -54,6 +55,8 @@ export default function DocumentList({
         return 'bg-violet-100 text-violet-800 border-violet-200';
       case 'QUOTATION':
         return 'bg-amber-100 text-amber-800 border-amber-200';
+      case 'CHALLAN':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'BILL':
         return 'bg-rose-100 text-rose-800 border-rose-200';
       case 'INVOICE':
@@ -85,60 +88,74 @@ export default function DocumentList({
     <div className="space-y-6 text-xs">
       
       {/* Dynamic shortcut creator cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {/* Card 1: Offer Letter */}
         <button
           onClick={() => onAddDocumentClick('OFFER_LETTER')}
-          className="bg-white border border-slate-200 hover:border-violet-500 hover:shadow-xs p-4 rounded-xl text-left space-y-2 transition-all cursor-pointer group"
+          className="bg-white border border-slate-200 hover:border-violet-500 hover:shadow-xs p-3.5 rounded-xl text-left space-y-1.5 transition-all cursor-pointer group"
         >
-          <div className="w-8 h-8 bg-violet-50 group-hover:bg-violet-100 text-violet-700 rounded-lg flex items-center justify-center transition-colors">
-            <FileText className="w-4 h-4" />
+          <div className="w-7 h-7 bg-violet-50 group-hover:bg-violet-100 text-violet-700 rounded-lg flex items-center justify-center transition-colors">
+            <FileText className="w-3.5 h-3.5" />
           </div>
           <div>
-            <span className="font-bold text-slate-900 block font-display leading-tight">Create Offer Letter</span>
-            <span className="text-[10px] text-slate-400 block mt-0.5">Formal pitch letters</span>
+            <span className="font-bold text-slate-900 block font-display leading-tight">Offer Letter</span>
+            <span className="text-[10px] text-slate-400 block mt-0.5">অফার লেটার</span>
           </div>
         </button>
 
         {/* Card 2: Quotation */}
         <button
           onClick={() => onAddDocumentClick('QUOTATION')}
-          className="bg-white border border-slate-200 hover:border-amber-500 hover:shadow-xs p-4 rounded-xl text-left space-y-2 transition-all cursor-pointer group"
+          className="bg-white border border-slate-200 hover:border-amber-500 hover:shadow-xs p-3.5 rounded-xl text-left space-y-1.5 transition-all cursor-pointer group"
         >
-          <div className="w-8 h-8 bg-amber-50 group-hover:bg-amber-100 text-amber-700 rounded-lg flex items-center justify-center transition-colors">
-            <FileText className="w-4 h-4" />
+          <div className="w-7 h-7 bg-amber-50 group-hover:bg-amber-100 text-amber-700 rounded-lg flex items-center justify-center transition-colors">
+            <FileText className="w-3.5 h-3.5" />
           </div>
           <div>
-            <span className="font-bold text-slate-900 block font-display leading-tight">Create Quotation</span>
-            <span className="text-[10px] text-slate-400 block mt-0.5">Price & maintenance quotes</span>
+            <span className="font-bold text-slate-900 block font-display leading-tight">Quotation</span>
+            <span className="text-[10px] text-slate-400 block mt-0.5">কোটেশন</span>
           </div>
         </button>
 
-        {/* Card 3: Invoice */}
+        {/* Card 3: Challan */}
+        <button
+          onClick={() => onAddDocumentClick('CHALLAN')}
+          className="bg-white border border-slate-200 hover:border-blue-500 hover:shadow-xs p-3.5 rounded-xl text-left space-y-1.5 transition-all cursor-pointer group"
+        >
+          <div className="w-7 h-7 bg-blue-50 group-hover:bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center transition-colors">
+            <FileText className="w-3.5 h-3.5" />
+          </div>
+          <div>
+            <span className="font-bold text-slate-900 block font-display leading-tight">Delivery Challan</span>
+            <span className="text-[10px] text-slate-400 block mt-0.5">ডেলিভারি চালান</span>
+          </div>
+        </button>
+
+        {/* Card 4: Invoice */}
         <button
           onClick={() => onAddDocumentClick('INVOICE')}
-          className="bg-white border border-slate-200 hover:border-emerald-500 hover:shadow-xs p-4 rounded-xl text-left space-y-2 transition-all cursor-pointer group"
+          className="bg-white border border-slate-200 hover:border-emerald-500 hover:shadow-xs p-3.5 rounded-xl text-left space-y-1.5 transition-all cursor-pointer group"
         >
-          <div className="w-8 h-8 bg-emerald-50 group-hover:bg-emerald-100 text-emerald-700 rounded-lg flex items-center justify-center transition-colors">
-            <FileText className="w-4 h-4" />
+          <div className="w-7 h-7 bg-emerald-50 group-hover:bg-emerald-100 text-emerald-700 rounded-lg flex items-center justify-center transition-colors">
+            <FileText className="w-3.5 h-3.5" />
           </div>
           <div>
-            <span className="font-bold text-slate-900 block font-display leading-tight">Generate Invoice</span>
-            <span className="text-[10px] text-slate-400 block mt-0.5">Billing to clients</span>
+            <span className="font-bold text-slate-900 block font-display leading-tight">Sales Invoice</span>
+            <span className="text-[10px] text-slate-400 block mt-0.5">বিল / চালান</span>
           </div>
         </button>
 
-        {/* Card 4: Purchase Bill */}
+        {/* Card 5: Purchase Bill */}
         <button
           onClick={() => onAddDocumentClick('BILL')}
-          className="bg-white border border-slate-200 hover:border-rose-500 hover:shadow-xs p-4 rounded-xl text-left space-y-2 transition-all cursor-pointer group"
+          className="bg-white border border-slate-200 hover:border-rose-500 hover:shadow-xs p-3.5 rounded-xl text-left space-y-1.5 transition-all cursor-pointer group"
         >
-          <div className="w-8 h-8 bg-rose-50 group-hover:bg-rose-100 text-rose-700 rounded-lg flex items-center justify-center transition-colors">
-            <FileText className="w-4 h-4" />
+          <div className="w-7 h-7 bg-rose-50 group-hover:bg-rose-100 text-rose-700 rounded-lg flex items-center justify-center transition-colors">
+            <FileText className="w-3.5 h-3.5" />
           </div>
           <div>
-            <span className="font-bold text-slate-900 block font-display leading-tight">Record Supplier Bill</span>
-            <span className="text-[10px] text-slate-400 block mt-0.5">Purchase expenditure bills</span>
+            <span className="font-bold text-slate-900 block font-display leading-tight">Supplier Bill</span>
+            <span className="text-[10px] text-slate-400 block mt-0.5">ক্রয় বিল</span>
           </div>
         </button>
       </div>
@@ -215,6 +232,17 @@ export default function DocumentList({
             }`}
           >
             Quotations ({typeCounts.QUOTATION})
+          </button>
+
+          <button
+            onClick={() => setSelectedType('CHALLAN')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+              selectedType === 'CHALLAN' 
+                ? 'bg-blue-700 text-white shadow-xs' 
+                : 'bg-slate-100 text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Delivery Challans ({typeCounts.CHALLAN})
           </button>
 
           <button

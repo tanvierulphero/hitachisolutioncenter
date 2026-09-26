@@ -93,6 +93,7 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
     switch (document.type) {
       case 'OFFER_LETTER': return 'OFFER LETTER';
       case 'QUOTATION': return 'QUOTATION';
+      case 'CHALLAN': return 'DELIVERY CHALLAN (চালান)';
       case 'BILL': return 'BILL';
       case 'INVOICE': return 'INVOICE';
       default: return 'DOCUMENT';
@@ -352,7 +353,7 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
                     <tr className="text-white uppercase text-xs tracking-wider font-bold bg-[#1e3a8a]">
                       <th className="py-2.5 px-1 sm:px-2 text-center rounded-l w-[6%]">SL</th>
                       <th className="py-2.5 px-2 text-left w-[34%]">Description of Goods / Spare Parts</th>
-                      <th className="py-2.5 px-1 sm:px-2 text-center w-[14%]">Brand</th>
+                      <th className="py-2.5 px-1 sm:px-2 text-center w-[14%]">Parts Number</th>
                       <th className="py-2.5 px-1 sm:px-2 text-center w-[8%]">Qty</th>
                       <th className="py-2.5 px-1 sm:px-2 text-center w-[8%]">Unit</th>
                       <th className="py-2.5 px-1.5 sm:px-2 text-right w-[15%]">Unit Price (BDT)</th>
@@ -367,8 +368,8 @@ export default function PrintDocument({ document, settings, onBack }: PrintDocum
                           {item.name}
                         </td>
                         <td className="py-2 px-1 sm:px-2 text-center">
-                          <span className="inline-block bg-slate-100 text-slate-700 font-bold px-1.5 py-0.5 rounded text-xs truncate max-w-full">
-                            {item.brand}
+                          <span className="inline-block bg-slate-100 text-slate-800 font-bold px-1.5 py-0.5 rounded text-xs font-mono truncate max-w-full">
+                            {item.brand || '—'}
                           </span>
                         </td>
                         <td className="py-2 px-1 sm:px-2 text-center font-semibold text-slate-900">{item.quantity}</td>

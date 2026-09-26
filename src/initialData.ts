@@ -1,4 +1,4 @@
-import { Product, Customer, Document, BusinessSettings, StaffUser, PermissionKey, FieldDispatch, Supplier, Purchase } from './types';
+import { Product, Customer, Document, BusinessSettings, StaffUser, PermissionKey, FieldDispatch, Supplier, Purchase, SalesReturn } from './types';
 
 export const ALL_PERMISSIONS: { key: PermissionKey; label: string; description: string; category: string }[] = [
   { key: 'view_overview', label: 'Overview Analytics', description: 'View high-level revenue and business overview stats', category: 'General' },
@@ -116,6 +116,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: "Screw Air Compressor",
     brand: "Hitachi",
     price: 650000,
+    costPrice: 480000,
     stock: 3,
     unit: "Set",
     description: "High-performance S-Type oil-flooded rotary screw air compressor with advanced microprocessor control, superior energy efficiency, and low noise levels.",
@@ -135,6 +136,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: "Screw Air Compressor",
     brand: "Atlas Copco",
     price: 890000,
+    costPrice: 660000,
     stock: 2,
     unit: "Set",
     description: "Premium variable speed drive (VSD+) rotary screw compressor. Saves up to 50% energy compared to fixed-speed models. Elegant vertical space-saving design.",
@@ -154,6 +156,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: "Air Dryer",
     brand: "Hitachi",
     price: 185000,
+    costPrice: 135000,
     stock: 5,
     unit: "Pcs",
     description: "High-efficiency refrigerated air dryer designed to remove moisture content from compressed air system to protect downstream pneumatic components.",
@@ -172,6 +175,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: "Line Filter",
     brand: "Atlas Copco",
     price: 32000,
+    costPrice: 22000,
     stock: 15,
     unit: "Pcs",
     description: "Coalescing air line filter for high-efficiency general purpose protection, removing liquid water and oil aerosol down to 0.1 mg/m³ (0.1 ppm) and particles down to 1 micron.",
@@ -190,6 +194,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: "Spare Parts",
     brand: "Hitachi",
     price: 12500,
+    costPrice: 8500,
     stock: 25,
     unit: "Pcs",
     description: "Genuine Hitachi air filter element to prevent dust and dirt particles from entering the compressor screw block, ensuring maximum longevity and performance.",
@@ -207,6 +212,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: "Spare Parts",
     brand: "Atlas Copco",
     price: 24000,
+    costPrice: 16500,
     stock: 12,
     unit: "Pcs",
     description: "Atlas Copco genuine replacement oil-air separator element. Guarantees minimum residual oil carryover in air (less than 2ppm) and maintains low pressure drop.",
@@ -224,6 +230,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: "Spare Parts",
     brand: "Hitachi",
     price: 45000,
+    costPrice: 32000,
     stock: 8,
     unit: "Can (20L)",
     description: "Premium synthetic food-grade lubricant oil for rotary screw compressors. Highly stable against oxidation, thermal breakdowns, and sludge formations.",
@@ -675,5 +682,32 @@ export const INITIAL_PURCHASES: Purchase[] = [
     status: "Received",
     notes: "Advance 300k paid by Cheque. Remaining 327k due on 30-day supplier credit.",
     createdAt: "2026-09-20"
+  }
+];
+
+export const INITIAL_SALES_RETURNS: SalesReturn[] = [
+  {
+    id: "ret-2026-001",
+    returnNumber: "RET/2026/001",
+    returnDate: "2026-09-22",
+    originalDocId: "doc-3",
+    originalDocNumber: "JM/INV/2026/0001",
+    customerId: "cust-1",
+    customerName: "Sabbir Rahman",
+    customerCompany: "Apex Textile Printing & Dyeing Ltd.",
+    customerPhone: "01712-456789",
+    productId: "prod-4",
+    productName: "Atlas Copco DD60+ High Efficiency Coalescing Line Filter",
+    sku: "AC-LF-DD60",
+    partsNumber: "AC-LF-DD60",
+    quantity: 1,
+    unit: "Pcs",
+    unitPrice: 32000,
+    refundAmount: 32000,
+    deductFromDue: true,
+    restocked: true,
+    reason: "Unused spare part returned after 1 month routine maintenance cycle",
+    notes: "Restocked into central warehouse. Adjusted against customer due ledger.",
+    createdAt: "2026-09-22"
   }
 ];

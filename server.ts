@@ -5,9 +5,9 @@ import path from 'path';
 import multer from 'multer';
 import { Server as SocketIOServer } from 'socket.io';
 import { db, pool } from './src/db/index.ts';
-import { products, customers, documents, staffUsers, settings, fieldDispatches, suppliers, purchases } from './src/db/schema.ts';
+import { products, customers, documents, staffUsers, settings, fieldDispatches, suppliers, purchases, salesReturns } from './src/db/schema.ts';
 import { eq, sql } from 'drizzle-orm';
-import { INITIAL_PRODUCTS, INITIAL_CUSTOMERS, INITIAL_DOCUMENTS, INITIAL_STAFF_USERS, DEFAULT_SETTINGS, INITIAL_FIELD_DISPATCHES, INITIAL_SUPPLIERS, INITIAL_PURCHASES } from './src/initialData.ts';
+import { INITIAL_PRODUCTS, INITIAL_CUSTOMERS, INITIAL_DOCUMENTS, INITIAL_STAFF_USERS, DEFAULT_SETTINGS, INITIAL_FIELD_DISPATCHES, INITIAL_SUPPLIERS, INITIAL_PURCHASES, INITIAL_SALES_RETURNS } from './src/initialData.ts';
 
 const app = express();
 const port = 3000;
@@ -151,6 +151,18 @@ async function seedInitialDataIfNeeded() {
         await db.insert(fieldDispatches).values(fd).onConflictDoNothing().catch(() => {});
       }
     }
+
+    const existingReturns = await db.select().from(salesReturns).limit(1).catch(() => []);
+    if (existingReturns.length === 0) {
+      console.log('Seeding initial sales returns into Cloud SQL...');
+      for (const ret of INITIAL_SALES_RETURNS) {
+        await (db.insert(salesReturns) as any).values({
+          ...ret,
+          deductFromDue: ret.deductFromDue ? 1 : 0,
+          restocked: ret.restocked ? 1 : 0
+        }).onConflictDoNothing().catch(() => {});
+      }
+    }
     isSeeded = true;
   } catch (err) {
     console.error('Data seeding check encountered notice:', err);
@@ -179,23 +191,38 @@ app.post('/api/products', async (req, res) => {
     if (!item.id) {
       return res.status(400).json({ error: 'Missing product ID' });
     }
-    await (db.insert(products) as any).values(item).onConflictDoUpdate({
+    const productData = {
+      id: String(item.id),
+      name: String(item.name || ''),
+      sku: String(item.sku || ''),
+      category: String(item.category || 'General'),
+      brand: String(item.brand || 'Hitachi'),
+      price: Number(item.price) || 0,
+      costPrice: item.costPrice !== undefined ? Number(item.costPrice) : (item.price ? Math.round(Number(item.price) * 0.75) : 0),
+      stock: Number(item.stock) || 0,
+      unit: String(item.unit || 'Pcs'),
+      description: String(item.description || ''),
+      specs: Array.isArray(item.specs) ? item.specs : [],
+      imageUrl: String(item.imageUrl || ''),
+    };
+    await (db.insert(products) as any).values(productData).onConflictDoUpdate({
       target: products.id,
       set: {
-        name: item.name,
-        sku: item.sku,
-        category: item.category,
-        brand: item.brand,
-        price: item.price,
-        stock: item.stock,
-        unit: item.unit,
-        description: item.description || '',
-        specs: item.specs || [],
-        imageUrl: item.imageUrl || '',
+        name: productData.name,
+        sku: productData.sku,
+        category: productData.category,
+        brand: productData.brand,
+        price: productData.price,
+        costPrice: productData.costPrice,
+        stock: productData.stock,
+        unit: productData.unit,
+        description: productData.description,
+        specs: productData.specs,
+        imageUrl: productData.imageUrl,
       },
     });
-    notifyChange('products', 'save', item);
-    res.json(item);
+    notifyChange('products', 'save', productData);
+    res.json(productData);
   } catch (err: any) {
     console.error('Failed to save product:', err);
     res.status(500).json({ error: err.message || 'Failed to save product' });
@@ -651,7 +678,75 @@ app.delete('/api/purchases/:id', async (req, res) => {
   }
 });
 
-// 9. Database & Server Health Diagnostics Check
+// 9. Sales Returns & Restock
+app.get('/api/returns', async (_req, res) => {
+  try {
+    await seedInitialDataIfNeeded();
+    const result = await db.select().from(salesReturns);
+    res.json(result);
+  } catch (err: any) {
+    console.error('Failed to fetch returns:', err);
+    res.status(500).json({ error: err.message || 'Failed to fetch returns' });
+  }
+});
+
+app.post('/api/returns', async (req, res) => {
+  try {
+    const item = req.body;
+    if (!item.id) {
+      return res.status(400).json({ error: 'Missing return ID' });
+    }
+    await (db.insert(salesReturns) as any).values({
+      ...item,
+      deductFromDue: item.deductFromDue ? 1 : 0,
+      restocked: item.restocked ? 1 : 0
+    }).onConflictDoUpdate({
+      target: salesReturns.id,
+      set: {
+        returnNumber: item.returnNumber,
+        returnDate: item.returnDate,
+        originalDocId: item.originalDocId || '',
+        originalDocNumber: item.originalDocNumber || '',
+        customerId: item.customerId,
+        customerName: item.customerName,
+        customerCompany: item.customerCompany || '',
+        customerPhone: item.customerPhone || '',
+        productId: item.productId,
+        productName: item.productName,
+        sku: item.sku || '',
+        partsNumber: item.partsNumber || '',
+        quantity: item.quantity,
+        unit: item.unit,
+        unitPrice: item.unitPrice,
+        refundAmount: item.refundAmount || 0,
+        deductFromDue: item.deductFromDue ? 1 : 0,
+        restocked: item.restocked ? 1 : 0,
+        reason: item.reason || '',
+        notes: item.notes || '',
+        createdAt: item.createdAt || '',
+      },
+    });
+    notifyChange('returns', 'save', item);
+    res.json(item);
+  } catch (err: any) {
+    console.error('Failed to save return:', err);
+    res.status(500).json({ error: err.message || 'Failed to save return' });
+  }
+});
+
+app.delete('/api/returns/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.delete(salesReturns).where(eq(salesReturns.id, id));
+    notifyChange('returns', 'delete', { id });
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('Failed to delete return:', err);
+    res.status(500).json({ error: err.message || 'Failed to delete return' });
+  }
+});
+
+// 10. Database & Server Health Diagnostics Check
 app.get('/api/health', async (_req, res) => {
   const startTime = Date.now();
   try {

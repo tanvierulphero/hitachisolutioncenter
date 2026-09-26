@@ -230,7 +230,7 @@ export default function PurchaseEntryModal({
     setItems(updated);
   };
 
-  const handleItemFieldChange = (index: number, field: 'productName' | 'quantity' | 'unitCost' | 'unit', value: any) => {
+  const handleItemFieldChange = (index: number, field: 'productName' | 'quantity' | 'unitCost' | 'unit' | 'sku' | 'brand', value: any) => {
     const updated = [...items];
     const current = { ...updated[index] };
     
@@ -246,6 +246,10 @@ export default function PurchaseEntryModal({
       current.productName = value;
     } else if (field === 'unit') {
       current.unit = value;
+    } else if (field === 'sku') {
+      current.sku = value;
+    } else if (field === 'brand') {
+      current.brand = value;
     }
 
     updated[index] = current;
@@ -606,11 +610,27 @@ export default function PurchaseEntryModal({
                             <input
                               type="text"
                               required
-                              placeholder="Product Title / Description"
+                              placeholder="Product Title / Description (পণ্যের নাম)"
                               value={item.productName}
                               onChange={(e) => handleItemFieldChange(index, 'productName', e.target.value)}
-                              className="w-full px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg"
+                              className="w-full px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg font-semibold"
                             />
+                            <div className="grid grid-cols-2 gap-1.5">
+                              <input
+                                type="text"
+                                placeholder="Parts No. / SKU"
+                                value={item.sku || ''}
+                                onChange={(e) => handleItemFieldChange(index, 'sku', e.target.value)}
+                                className="w-full px-2 py-1 text-[11px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded font-mono"
+                              />
+                              <input
+                                type="text"
+                                placeholder="Brand (e.g. Hitachi)"
+                                value={item.brand || ''}
+                                onChange={(e) => handleItemFieldChange(index, 'brand', e.target.value)}
+                                className="w-full px-2 py-1 text-[11px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded"
+                              />
+                            </div>
                           </div>
                         </td>
                         <td className="py-2.5 px-3">

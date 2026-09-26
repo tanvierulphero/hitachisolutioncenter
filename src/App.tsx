@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
-import { Product, Customer, Document, BusinessSettings, DocumentType, StaffUser, PermissionKey, FieldDispatch, Supplier, Purchase } from './types';
+import { Product, Customer, Document, BusinessSettings, DocumentType, StaffUser, PermissionKey, FieldDispatch, Supplier, Purchase, SalesReturn } from './types';
 import { 
   DEFAULT_SETTINGS, 
   INITIAL_PRODUCTS, 
   INITIAL_CUSTOMERS, 
-  INITIAL_DOCUMENTS,
-  INITIAL_STAFF_USERS,
-  INITIAL_FIELD_DISPATCHES,
-  INITIAL_SUPPLIERS,
-  INITIAL_PURCHASES
+  INITIAL_DOCUMENTS, 
+  INITIAL_STAFF_USERS, 
+  INITIAL_FIELD_DISPATCHES, 
+  INITIAL_SUPPLIERS, 
+  INITIAL_PURCHASES,
+  INITIAL_SALES_RETURNS
 } from './initialData';
 
 // Component imports
@@ -77,6 +78,9 @@ import {
   apiGetPurchases,
   apiSavePurchase,
   apiDeletePurchase,
+  apiGetReturns,
+  apiSaveReturn,
+  apiDeleteReturn,
   apiCheckDatabaseHealth,
   DbHealthResult
 } from './lib/api';
@@ -106,6 +110,7 @@ export default function App() {
   const [dispatches, setDispatches] = useState<FieldDispatch[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [salesReturns, setSalesReturns] = useState<SalesReturn[]>([]);
   const [settings, setSettings] = useState<BusinessSettings>(DEFAULT_SETTINGS);
 
   // Focus workflows
@@ -157,6 +162,7 @@ export default function App() {
     const cachedDispatches = localStorage.getItem('hsc_dispatches');
     const cachedSuppliers = localStorage.getItem('hsc_suppliers');
     const cachedPurchases = localStorage.getItem('hsc_purchases');
+    const cachedReturns = localStorage.getItem('hsc_returns');
 
     if (cachedProds) setProducts(JSON.parse(cachedProds));
     if (cachedCusts) setCustomers(JSON.parse(cachedCusts));
@@ -164,9 +170,10 @@ export default function App() {
     if (cachedDispatches) setDispatches(JSON.parse(cachedDispatches));
     if (cachedSuppliers) setSuppliers(JSON.parse(cachedSuppliers));
     if (cachedPurchases) setPurchases(JSON.parse(cachedPurchases));
+    if (cachedReturns) setSalesReturns(JSON.parse(cachedReturns));
 
     try {
-      const [prods, custs, docs, staff, setts, disps, sups, purs] = await Promise.all([
+      const [prods, custs, docs, staff, setts, disps, sups, purs, rets] = await Promise.all([
         apiGetProducts().catch(() => cachedProds ? JSON.parse(cachedProds) : INITIAL_PRODUCTS),
         apiGetCustomers().catch(() => cachedCusts ? JSON.parse(cachedCusts) : INITIAL_CUSTOMERS),
         apiGetDocuments().catch(() => cachedDocs ? JSON.parse(cachedDocs) : INITIAL_DOCUMENTS),
@@ -175,6 +182,7 @@ export default function App() {
         apiGetFieldDispatches().catch(() => cachedDispatches ? JSON.parse(cachedDispatches) : INITIAL_FIELD_DISPATCHES),
         apiGetSuppliers().catch(() => cachedSuppliers ? JSON.parse(cachedSuppliers) : INITIAL_SUPPLIERS),
         apiGetPurchases().catch(() => cachedPurchases ? JSON.parse(cachedPurchases) : INITIAL_PURCHASES),
+        apiGetReturns().catch(() => cachedReturns ? JSON.parse(cachedReturns) : INITIAL_SALES_RETURNS),
       ]);
 
       if (prods && prods.length > 0) {
@@ -217,6 +225,13 @@ export default function App() {
         localStorage.setItem('hsc_purchases', JSON.stringify(purs));
       } else if (!cachedPurchases) {
         setPurchases(INITIAL_PURCHASES);
+      }
+
+      if (rets && rets.length > 0) {
+        setSalesReturns(rets);
+        localStorage.setItem('hsc_returns', JSON.stringify(rets));
+      } else if (!cachedReturns) {
+        setSalesReturns(INITIAL_SALES_RETURNS);
       }
 
       setStaffUsers(staff.length > 0 ? staff : INITIAL_STAFF_USERS);
@@ -265,6 +280,8 @@ export default function App() {
         apiGetSuppliers().then(setSuppliers).catch(() => {});
       } else if (change.entity === 'purchases') {
         apiGetPurchases().then(setPurchases).catch(() => {});
+      } else if (change.entity === 'returns') {
+        apiGetReturns().then(setSalesReturns).catch(() => {});
       }
     });
 
@@ -531,20 +548,68 @@ export default function App() {
     setPurchases(list);
     localStorage.setItem('hsc_purchases', JSON.stringify(list));
 
-    // Automatically increase inventory stock if requested
+    // Automatically update or create products in inventory
+    let updatedProducts = [...products];
     if (updateStock && purchase.status === 'Received') {
-      const updatedProducts = products.map(prod => {
-        const item = purchase.items.find(it => it.productId === prod.id);
-        if (item && item.quantity > 0) {
-          const updatedProd = {
-            ...prod,
-            stock: prod.stock + item.quantity
+      for (let idx = 0; idx < purchase.items.length; idx++) {
+        const item = purchase.items[idx];
+        const itemQty = Number(item.quantity) || 1;
+        const itemUnitCost = Number(item.unitCost) || 0;
+        
+        // Find existing product by ID, SKU, or Name
+        const existingIdx = updatedProducts.findIndex(p => 
+          (item.productId && p.id === item.productId) ||
+          (item.sku && p.sku && p.sku.trim().toLowerCase() === item.sku.trim().toLowerCase()) ||
+          (p.name.trim().toLowerCase() === item.productName.trim().toLowerCase())
+        );
+
+        if (existingIdx >= 0) {
+          const matchedProd = updatedProducts[existingIdx];
+          const newStock = matchedProd.stock + itemQty;
+          const updatedProd: Product = {
+            ...matchedProd,
+            stock: newStock,
+            costPrice: itemUnitCost > 0 ? itemUnitCost : (matchedProd.costPrice || Math.round(matchedProd.price * 0.75)),
+            brand: item.brand?.trim() || matchedProd.brand,
+            sku: item.sku?.trim() || matchedProd.sku,
+            unit: item.unit?.trim() || matchedProd.unit
           };
-          apiSaveProduct(updatedProd).catch(() => {});
-          return updatedProd;
+          updatedProducts[existingIdx] = updatedProd;
+          try {
+            await apiSaveProduct(updatedProd);
+          } catch (e) {
+            console.warn('Backend sync warning for updating product stock:', e);
+          }
+        } else {
+          // BRAND NEW PRODUCT - Automatically create in inventory!
+          const newId = item.productId && item.productId.startsWith('prod-')
+            ? item.productId
+            : `prod-${Date.now()}-${idx}`;
+          item.productId = newId;
+
+          const newProduct: Product = {
+            id: newId,
+            name: item.productName.trim() || 'New Purchased Spare Part',
+            sku: item.sku?.trim() || `SKU-${Math.floor(1000 + Math.random() * 9000)}`,
+            category: 'Spare Parts & Consumables',
+            brand: item.brand?.trim() || 'Hitachi',
+            price: itemUnitCost > 0 ? Math.round(itemUnitCost * 1.35) : 1000,
+            costPrice: itemUnitCost,
+            stock: itemQty,
+            unit: item.unit?.trim() || 'Pcs',
+            description: `Auto-added from purchase voucher #${purchase.purchaseNumber}`,
+            specs: [],
+            imageUrl: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&auto=format&fit=crop&q=60'
+          };
+          updatedProducts = [newProduct, ...updatedProducts];
+          try {
+            await apiSaveProduct(newProduct);
+          } catch (e) {
+            console.warn('Backend sync warning for new purchase product:', e);
+          }
         }
-        return prod;
-      });
+      }
+
       setProducts(updatedProducts);
       localStorage.setItem('hsc_products', JSON.stringify(updatedProducts));
     }
@@ -564,6 +629,91 @@ export default function App() {
       await apiDeletePurchase(id);
     } catch (e) {
       console.warn('Backend sync warning for delete purchase:', e);
+    }
+  };
+
+  // Sales Returns & Restock Handlers
+  const handleSaveReturn = async (ret: SalesReturn) => {
+    const existingIndex = salesReturns.findIndex(r => r.id === ret.id);
+    let list: SalesReturn[];
+    if (existingIndex >= 0) {
+      list = [...salesReturns];
+      list[existingIndex] = ret;
+    } else {
+      list = [ret, ...salesReturns];
+    }
+    setSalesReturns(list);
+    localStorage.setItem('hsc_returns', JSON.stringify(list));
+
+    // 1. If restocked, increase inventory product stock immediately!
+    if (ret.restocked && ret.quantity > 0) {
+      const updatedProducts = products.map(prod => {
+        if (prod.id === ret.productId || (ret.sku && prod.sku.toLowerCase() === ret.sku.toLowerCase())) {
+          const updated = {
+            ...prod,
+            stock: prod.stock + ret.quantity
+          };
+          apiSaveProduct(updated).catch(() => {});
+          return updated;
+        }
+        return prod;
+      });
+      setProducts(updatedProducts);
+      localStorage.setItem('hsc_products', JSON.stringify(updatedProducts));
+    }
+
+    // 2. If deductFromDue, adjust customer's invoice/bill due amount
+    if (ret.deductFromDue && ret.refundAmount > 0 && ret.originalDocId) {
+      const doc = documents.find(d => d.id === ret.originalDocId);
+      if (doc) {
+        const currentDue = doc.dueAmount !== undefined ? doc.dueAmount : doc.total;
+        const newDue = Math.max(0, currentDue - ret.refundAmount);
+        const newPaid = Math.max(0, doc.total - newDue);
+        const updatedDoc: Document = {
+          ...doc,
+          dueAmount: newDue,
+          paidAmount: newPaid,
+          status: newDue === 0 ? 'Paid' : 'Partially Paid',
+          notes: (doc.notes || '') + `\n[Sales Return #${ret.returnNumber}: ৳${ret.refundAmount.toLocaleString()} adjusted against due on ${ret.returnDate}]`
+        };
+        const updatedDocs = documents.map(d => d.id === updatedDoc.id ? updatedDoc : d);
+        setDocuments(updatedDocs);
+        localStorage.setItem('hsc_documents', JSON.stringify(updatedDocs));
+        apiSaveDocument(updatedDoc).catch(() => {});
+      }
+    }
+
+    try {
+      await apiSaveReturn(ret);
+    } catch (e) {
+      console.warn('Backend sync warning for sales return:', e);
+    }
+  };
+
+  const handleDeleteReturn = async (id: string) => {
+    const list = salesReturns.filter(r => r.id !== id);
+    setSalesReturns(list);
+    localStorage.setItem('hsc_returns', JSON.stringify(list));
+    try {
+      await apiDeleteReturn(id);
+    } catch (e) {
+      console.warn('Backend sync warning for delete sales return:', e);
+    }
+  };
+
+  // Batch Update Documents Handler (for Company-wide Payment Allocation)
+  const handleBatchUpdateDocuments = async (docsToUpdate: Document[]) => {
+    const updatedMap = new Map(docsToUpdate.map(d => [d.id, d]));
+    const list = documents.map(doc => updatedMap.has(doc.id) ? updatedMap.get(doc.id)! : doc);
+    setDocuments(list);
+    localStorage.setItem('hsc_documents', JSON.stringify(list));
+
+    for (const doc of docsToUpdate) {
+      try {
+        await apiSaveDocument(doc);
+      } catch (e) {
+        console.warn('Backend sync warning for document update:', e);
+      }
     }
   };
 
@@ -985,6 +1135,9 @@ export default function App() {
                       documents={documents}
                       products={products}
                       customers={customers}
+                      returns={salesReturns}
+                      onSaveReturn={handleSaveReturn}
+                      onDeleteReturn={handleDeleteReturn}
                     />
                   )}
 
@@ -994,6 +1147,7 @@ export default function App() {
                       documents={documents}
                       customers={customers}
                       onUpdateDocument={handleSaveDocument}
+                      onBatchUpdateDocuments={handleBatchUpdateDocuments}
                       onViewDocument={(doc) => setViewingDocument(doc)}
                     />
                   )}

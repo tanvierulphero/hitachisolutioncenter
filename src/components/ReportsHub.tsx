@@ -1,17 +1,64 @@
 import { useState, useMemo } from 'react';
-import { Document, Product, Customer } from '../types';
-import { Download, Users, ShoppingBag, DollarSign, Calendar, BarChart3, ArrowDown } from 'lucide-react';
+import { Document, Product, Customer, SalesReturn } from '../types';
+import { 
+  Download, 
+  Users, 
+  ShoppingBag, 
+  DollarSign, 
+  Calendar, 
+  BarChart3, 
+  ArrowDown, 
+  RotateCcw, 
+  PlusCircle, 
+  Trash2, 
+  CheckCircle2, 
+  AlertCircle,
+  Package,
+  Layers,
+  Search
+} from 'lucide-react';
 
 interface ReportsHubProps {
   documents: Document[];
   products: Product[];
   customers: Customer[];
+  returns?: SalesReturn[];
+  onSaveReturn?: (ret: SalesReturn) => Promise<void> | void;
+  onDeleteReturn?: (id: string) => Promise<void> | void;
 }
 
-export default function ReportsHub({ documents, products, customers }: ReportsHubProps) {
-  const [activeReportTab, setActiveReportTab] = useState<'sales' | 'customer' | 'product'>('sales');
+export default function ReportsHub({ 
+  documents, 
+  products, 
+  customers,
+  returns = [],
+  onSaveReturn,
+  onDeleteReturn
+}: ReportsHubProps) {
+  const [activeReportTab, setActiveReportTab] = useState<'sales' | 'customer' | 'product' | 'returns'>('sales');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('All');
   const [selectedBrand, setSelectedBrand] = useState<string>('All');
+  const [returnSearch, setReturnSearch] = useState('');
+
+  // Return Modal State
+  const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
+  const [returnDocId, setReturnDocId] = useState('');
+  const [returnCustomerId, setReturnCustomerId] = useState('');
+  const [returnProductId, setReturnProductId] = useState('');
+  const [returnProductName, setReturnProductName] = useState('');
+  const [returnSku, setReturnSku] = useState('');
+  const [returnBrand, setReturnBrand] = useState('');
+  const [returnUnit, setReturnUnit] = useState('Pcs');
+  const [returnQuantity, setReturnQuantity] = useState<number>(1);
+  const [returnUnitPrice, setReturnUnitPrice] = useState<number>(0);
+  const [returnRefundAmount, setReturnRefundAmount] = useState<number>(0);
+  const [returnDate, setReturnDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [returnRestocked, setReturnRestocked] = useState(true);
+  const [returnDeductDue, setReturnDeductDue] = useState(true);
+  const [returnReason, setReturnReason] = useState('Wrong Specification / সাইজ বা স্পেক অমিল');
+  const [returnNotes, setReturnNotes] = useState('');
+  const [isSubmittingReturn, setIsSubmittingReturn] = useState(false);
+  const [returnError, setReturnError] = useState('');
 
   // unique brands list
   const brands = useMemo(() => {
@@ -97,8 +144,146 @@ export default function ReportsHub({ documents, products, customers }: ReportsHu
     return productSalesSummary.filter(p => p.brand === selectedBrand);
   }, [productSalesSummary, selectedBrand]);
 
+  // Sales Returns Metrics
+  const returnsMetrics = useMemo(() => {
+    const totalCount = returns.length;
+    const totalUnitsRestocked = returns.reduce((sum, r) => sum + (r.restocked ? r.quantity : 0), 0);
+    const totalRefundAmount = returns.reduce((sum, r) => sum + (r.refundAmount || 0), 0);
+    return {
+      totalCount,
+      totalUnitsRestocked,
+      totalRefundAmount
+    };
+  }, [returns]);
+
+  const filteredReturns = useMemo(() => {
+    if (!returnSearch.trim()) return returns;
+    const term = returnSearch.toLowerCase();
+    return returns.filter(r => 
+      r.returnNumber.toLowerCase().includes(term) ||
+      r.customerName.toLowerCase().includes(term) ||
+      (r.customerCompany && r.customerCompany.toLowerCase().includes(term)) ||
+      r.productName.toLowerCase().includes(term) ||
+      (r.sku && r.sku.toLowerCase().includes(term)) ||
+      (r.originalDocNumber && r.originalDocNumber.toLowerCase().includes(term))
+    );
+  }, [returns, returnSearch]);
+
+  // List of sales invoices available for returns (past 1, 2, or more months)
+  const salesInvoices = useMemo(() => {
+    return documents.filter(d => d.type === 'INVOICE' || d.type === 'BILL');
+  }, [documents]);
+
+  const selectedInvoice = useMemo(() => {
+    return documents.find(d => d.id === returnDocId) || null;
+  }, [documents, returnDocId]);
+
+  // Handle invoice selection in return modal
+  const handleSelectInvoice = (docId: string) => {
+    setReturnDocId(docId);
+    const doc = documents.find(d => d.id === docId);
+    if (doc) {
+      setReturnCustomerId(doc.customerId || '');
+      // If invoice has items, pre-select first item
+      if (doc.items && doc.items.length > 0) {
+        const item = doc.items[0];
+        setReturnProductId(item.productId || '');
+        setReturnProductName(item.name);
+        setReturnSku(item.brand || '');
+        setReturnBrand('Hitachi');
+        setReturnUnit(item.unit || 'Pcs');
+        setReturnQuantity(1);
+        setReturnUnitPrice(item.price);
+        setReturnRefundAmount(item.price * 1);
+      }
+    }
+  };
+
+  // Handle selecting an item from the selected invoice
+  const handleSelectInvoiceItem = (itemId: string) => {
+    if (!selectedInvoice) return;
+    const item = selectedInvoice.items.find(i => i.id === itemId);
+    if (item) {
+      setReturnProductId(item.productId || '');
+      setReturnProductName(item.name);
+      setReturnSku(item.brand || '');
+      setReturnBrand('Hitachi');
+      setReturnUnit(item.unit || 'Pcs');
+      setReturnUnitPrice(item.price);
+      setReturnRefundAmount(item.price * returnQuantity);
+    }
+  };
+
+  // Handle Return Form Submit
+  const handleReturnSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setReturnError('');
+
+    if (!returnProductName.trim()) {
+      setReturnError('Please specify the product being returned.');
+      return;
+    }
+    if (returnQuantity <= 0) {
+      setReturnError('Return quantity must be at least 1.');
+      return;
+    }
+
+    setIsSubmittingReturn(true);
+    try {
+      const cust = customers.find(c => c.id === returnCustomerId) || (selectedInvoice ? {
+        id: selectedInvoice.customerId,
+        name: selectedInvoice.customerName,
+        company: selectedInvoice.customerCompany
+      } : null);
+
+      const returnRecord: SalesReturn = {
+        id: `ret-${Date.now()}`,
+        returnNumber: `RET/${new Date().getFullYear()}/${String(returns.length + 1).padStart(3, '0')}`,
+        returnDate,
+        originalDocId: returnDocId || undefined,
+        originalDocNumber: selectedInvoice?.docNumber || undefined,
+        customerId: returnCustomerId || selectedInvoice?.customerId || 'cust-general',
+        customerName: cust?.name || selectedInvoice?.customerName || 'General Customer',
+        customerCompany: cust?.company || selectedInvoice?.customerCompany || '',
+        productId: returnProductId || `prod-ret-${Date.now()}`,
+        productName: returnProductName.trim(),
+        sku: returnSku.trim(),
+        brand: returnBrand.trim() || 'Hitachi',
+        unit: returnUnit.trim() || 'Pcs',
+        quantity: Number(returnQuantity) || 1,
+        unitPrice: Number(returnUnitPrice) || 0,
+        refundAmount: Number(returnRefundAmount) || 0,
+        restocked: returnRestocked,
+        deductFromDue: returnDeductDue,
+        reason: returnReason,
+        notes: returnNotes.trim(),
+        createdAt: new Date().toISOString().split('T')[0]
+      };
+
+      if (onSaveReturn) {
+        await onSaveReturn(returnRecord);
+      }
+
+      setIsReturnModalOpen(false);
+      // Reset form
+      setReturnDocId('');
+      setReturnCustomerId('');
+      setReturnProductId('');
+      setReturnProductName('');
+      setReturnSku('');
+      setReturnQuantity(1);
+      setReturnUnitPrice(0);
+      setReturnRefundAmount(0);
+      setReturnNotes('');
+    } catch (err: any) {
+      setReturnError(err.message || 'Failed to submit sales return');
+    } finally {
+      setIsSubmittingReturn(false);
+    }
+  };
+
   // CLIENT-SIDE DOWNLOAD DYNAMIC CSV GENERATOR
-  const downloadCSV = (reportType: 'sales' | 'customers' | 'products') => {
+  const downloadCSV = (reportType: 'sales' | 'customers' | 'products' | 'returns') => {
     let csvContent = "data:text/csv;charset=utf-8,";
     let filename = `hitachisolutioncenter-${reportType}-Report.csv`;
 
@@ -120,6 +305,11 @@ export default function ReportsHub({ documents, products, customers }: ReportsHu
       csvContent += "SKU,Product Name,Category,Brand,Standard Unit Price (BDT),Available Stock,Quantity Sold,Revenue Generated (BDT)\n";
       productSalesSummary.forEach(p => {
         csvContent += `"${p.sku}","${p.name}","${p.category}","${p.brand}",${p.price},${p.stock},${p.qtySold},${p.totalRevenue}\n`;
+      });
+    } else if (reportType === 'returns') {
+      csvContent += "Return Voucher No,Return Date,Invoice Ref,Customer,Company,Product Name,Parts No/SKU,Quantity,Unit,Refund Amount (BDT),Restocked In Inventory,Deducted From Due,Reason,Notes\n";
+      returns.forEach(r => {
+        csvContent += `"${r.returnNumber}","${r.returnDate}","${r.originalDocNumber || ''}","${r.customerName}","${r.customerCompany || ''}","${r.productName}","${r.sku || ''}",${r.quantity},"${r.unit}",${r.refundAmount},"${r.restocked ? 'YES' : 'NO'}","${r.deductFromDue ? 'YES' : 'NO'}","${r.reason}","${r.notes || ''}"\n`;
       });
     }
 
@@ -170,16 +360,40 @@ export default function ReportsHub({ documents, products, customers }: ReportsHu
           >
             Product Stock Reports
           </button>
+
+          <button
+            onClick={() => setActiveReportTab('returns')}
+            className={`px-4 py-2 font-bold uppercase tracking-wider rounded-md cursor-pointer transition-colors flex items-center gap-1.5 ${
+              activeReportTab === 'returns'
+                ? 'bg-rose-700 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            Sales Returns & Restock ({returns.length})
+          </button>
         </div>
 
-        {/* Download Button */}
-        <button
-          onClick={() => downloadCSV(activeReportTab === 'sales' ? 'sales' : activeReportTab === 'customer' ? 'customers' : 'products')}
-          className="px-4 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold uppercase tracking-wider rounded-lg flex items-center gap-1.5 shadow-xs cursor-pointer"
-        >
-          <Download className="w-4.5 h-4.5" />
-          Download CSV Spreadsheet
-        </button>
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2">
+          {activeReportTab === 'returns' && (
+            <button
+              onClick={() => setIsReturnModalOpen(true)}
+              className="px-4 py-2.5 bg-rose-700 hover:bg-rose-800 text-white font-bold uppercase tracking-wider rounded-lg flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
+            >
+              <PlusCircle className="w-4 h-4" />
+              + New Sales Return (নতুন রিটার্ন এন্ট্রি)
+            </button>
+          )}
+
+          <button
+            onClick={() => downloadCSV(activeReportTab === 'customer' ? 'customers' : activeReportTab === 'product' ? 'products' : activeReportTab)}
+            className="px-4 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold uppercase tracking-wider rounded-lg flex items-center gap-1.5 shadow-xs cursor-pointer"
+          >
+            <Download className="w-4.5 h-4.5" />
+            Download CSV Spreadsheet
+          </button>
+        </div>
       </div>
 
       {/* RENDER DYNAMIC TAB CONTENT */}
@@ -439,6 +653,450 @@ export default function ReportsHub({ documents, products, customers }: ReportsHu
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 4: Sales Returns & Restock Hub */}
+      {activeReportTab === 'returns' && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Subheader summary grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <div className="bg-rose-50 border border-rose-200 rounded-xl p-5 text-rose-900 space-y-1.5">
+              <div className="flex items-center gap-1">
+                <RotateCcw className="w-4 h-4 text-rose-600" />
+                <span className="font-bold text-[10px] uppercase tracking-wider text-rose-600">Total Returns Recorded</span>
+              </div>
+              <h4 className="text-xl font-extrabold font-display">{returnsMetrics.totalCount} Vouchers</h4>
+              <p className="text-[10px] text-rose-700/80 font-semibold">গ্রাহকের ফেরত সংক্রান্ত সম্পূর্ণ হিসাব</p>
+            </div>
+
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 text-emerald-900 space-y-1.5">
+              <div className="flex items-center gap-1">
+                <Package className="w-4 h-4 text-emerald-600" />
+                <span className="font-bold text-[10px] uppercase tracking-wider text-emerald-600">Restocked Into Inventory</span>
+              </div>
+              <h4 className="text-xl font-extrabold font-display">+{returnsMetrics.totalUnitsRestocked} Units</h4>
+              <p className="text-[10px] text-emerald-700/80 font-semibold">স্বয়ংক্রিয়ভাবে ইনভেন্টরিতে রি-স্টক সম্পন্ন</p>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 text-blue-900 space-y-1.5">
+              <div className="flex items-center gap-1">
+                <DollarSign className="w-4 h-4 text-blue-600" />
+                <span className="font-bold text-[10px] uppercase tracking-wider text-blue-600">Refund / Due Adjustment Value</span>
+              </div>
+              <h4 className="text-xl font-extrabold font-display">৳{returnsMetrics.totalRefundAmount.toLocaleString()}</h4>
+              <p className="text-[10px] text-blue-700/80 font-semibold">বকেয়া থেকে সমন্বয় ও রিফান্ড মূল্য</p>
+            </div>
+          </div>
+
+          {/* Search bar & filter toolbar */}
+          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                placeholder="Search Return #, customer, invoice ref, or parts no..."
+                value={returnSearch}
+                onChange={(e) => setReturnSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:bg-white focus:outline-hidden"
+              />
+            </div>
+
+            <button
+              onClick={() => setIsReturnModalOpen(true)}
+              className="px-4 py-2 bg-rose-700 hover:bg-rose-800 text-white font-bold uppercase tracking-wider rounded-lg flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
+            >
+              <PlusCircle className="w-4 h-4" />
+              + New Sales Return (নতুন রিটার্ন এন্ট্রি)
+            </button>
+          </div>
+
+          {/* Returns Table */}
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    <th className="py-3.5 px-4">Return SNo. / Date</th>
+                    <th className="py-3.5 px-3">Customer / Company</th>
+                    <th className="py-3.5 px-3">Invoice Ref</th>
+                    <th className="py-3.5 px-3">Product & Parts No.</th>
+                    <th className="py-3.5 px-3 text-center">Returned Qty</th>
+                    <th className="py-3.5 px-3 text-right">Refund / Value</th>
+                    <th className="py-3.5 px-3 text-center">Restocked</th>
+                    <th className="py-3.5 px-3">Reason & Notes</th>
+                    {onDeleteReturn && <th className="py-3.5 px-3 text-center w-12"></th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredReturns.length > 0 ? (
+                    filteredReturns.map(ret => (
+                      <tr key={ret.id} className="hover:bg-slate-50/50">
+                        {/* Return No & Date */}
+                        <td className="py-3.5 px-4">
+                          <div className="space-y-0.5">
+                            <span className="font-extrabold text-slate-900 block font-mono text-xs">{ret.returnNumber}</span>
+                            <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                              <Calendar className="w-3 h-3 text-slate-400" />
+                              {ret.returnDate}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Customer */}
+                        <td className="py-3.5 px-3">
+                          <div className="space-y-0.5">
+                            <span className="font-bold text-slate-900 block leading-tight">{ret.customerName}</span>
+                            <span className="text-[10px] text-slate-400 block">{ret.customerCompany || 'General'}</span>
+                          </div>
+                        </td>
+
+                        {/* Invoice Ref */}
+                        <td className="py-3.5 px-3 font-mono text-xs">
+                          {ret.originalDocNumber ? (
+                            <span className="inline-block bg-blue-50 text-blue-800 font-bold px-2 py-0.5 rounded border border-blue-200">
+                              {ret.originalDocNumber}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 italic">Direct Return</span>
+                          )}
+                        </td>
+
+                        {/* Product & Parts No */}
+                        <td className="py-3.5 px-3 max-w-xs">
+                          <div className="space-y-0.5">
+                            <span className="font-bold text-slate-900 block leading-tight">{ret.productName}</span>
+                            {ret.sku && (
+                              <span className="text-[10px] font-mono text-slate-500 font-bold bg-slate-100 px-1.5 py-0.5 rounded inline-block">
+                                Parts: {ret.sku}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Returned Qty */}
+                        <td className="py-3.5 px-3 text-center">
+                          <span className="font-extrabold text-sm text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                            {ret.quantity} {ret.unit || 'Pcs'}
+                          </span>
+                        </td>
+
+                        {/* Refund Value */}
+                        <td className="py-3.5 px-3 text-right">
+                          <span className="font-black text-slate-900 font-display text-xs block">
+                            ৳{(ret.refundAmount || 0).toLocaleString()}
+                          </span>
+                          {ret.deductFromDue ? (
+                            <span className="text-[9px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">
+                              Due Deducted
+                            </span>
+                          ) : (
+                            <span className="text-[9px] font-bold text-slate-500">
+                              Cash/Bank Refund
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Restocked */}
+                        <td className="py-3.5 px-3 text-center">
+                          {ret.restocked ? (
+                            <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold px-2 py-0.5 rounded-full text-[10px]">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                              Restocked (+{ret.quantity})
+                            </span>
+                          ) : (
+                            <span className="inline-block bg-slate-100 text-slate-500 font-bold px-2 py-0.5 rounded-full text-[10px]">
+                              No Restock
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Reason & Notes */}
+                        <td className="py-3.5 px-3 max-w-xs">
+                          <div className="space-y-0.5">
+                            <span className="inline-block bg-amber-50 text-amber-800 border border-amber-200 font-bold px-1.5 py-0.5 rounded text-[10px]">
+                              {ret.reason}
+                            </span>
+                            {ret.notes && (
+                              <p className="text-[10px] text-slate-500 italic line-clamp-1">{ret.notes}</p>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Actions */}
+                        {onDeleteReturn && (
+                          <td className="py-3.5 px-3 text-center">
+                            <button
+                              onClick={() => onDeleteReturn(ret.id)}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer rounded hover:bg-rose-50"
+                              title="Delete return record"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={9} className="text-center py-12 text-slate-400 italic">
+                        {returnSearch ? 'No sales returns matched your search.' : 'No sales returns recorded yet. Click "+ New Sales Return" above to record a returned item.'}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NEW SALES RETURN MODAL */}
+      {isReturnModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-xl w-full border border-slate-200 shadow-2xl p-6 space-y-4 my-8 animate-scale-up">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center font-bold">
+                  <RotateCcw className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">New Sales Return Entry (সেলস রিটার্ন এন্ট্রি)</h3>
+                  <p className="text-[10px] text-slate-400">১ মাস বা ২ মাস পূর্বে বিক্রিত পণ্য ফেরত হলে স্টক রিস্টক করুন ও রেকর্ড রাখুন</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsReturnModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 text-lg font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {returnError && (
+              <div className="p-2.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-xs font-semibold flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{returnError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleReturnSubmit} className="space-y-4 text-xs">
+              {/* Row 1: Invoice Selection & Return Date */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700">Past Sales Invoice (চালান/ইনভয়েস নির্বাচন)</label>
+                  <select
+                    value={returnDocId}
+                    onChange={(e) => handleSelectInvoice(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-semibold text-slate-800 focus:outline-hidden"
+                  >
+                    <option value="">-- Direct Return (No Invoice Attached) --</option>
+                    {salesInvoices.map(inv => (
+                      <option key={inv.id} value={inv.id}>
+                        {inv.docNumber} ({inv.date}) - {inv.customerName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700">Return Date (ফেরতের তারিখ)</label>
+                  <input
+                    type="date"
+                    value={returnDate}
+                    onChange={(e) => setReturnDate(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-semibold"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* If invoice has multiple items, let user pick which item was returned */}
+              {selectedInvoice && selectedInvoice.items && selectedInvoice.items.length > 0 && (
+                <div className="space-y-1 bg-blue-50/60 p-3 rounded-xl border border-blue-100">
+                  <label className="font-bold text-blue-900 block">Select Item from Invoice (ইনভয়েসের কোন পণ্যটি ফেরত এসেছে?)</label>
+                  <select
+                    onChange={(e) => handleSelectInvoiceItem(e.target.value)}
+                    className="w-full bg-white border border-blue-200 rounded-lg p-2 font-semibold text-slate-800 focus:outline-hidden"
+                  >
+                    {selectedInvoice.items.map(item => (
+                      <option key={item.id} value={item.id}>
+                        {item.name} ({item.brand || 'No Parts No'} | Qty: {item.quantity} | Rate: ৳{item.price.toLocaleString()})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Row 2: Customer Selection (if direct return) */}
+              {!selectedInvoice && (
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700">Customer (কাস্টমার)</label>
+                  <select
+                    value={returnCustomerId}
+                    onChange={(e) => setReturnCustomerId(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-semibold text-slate-800 focus:outline-hidden"
+                  >
+                    <option value="">-- Select Customer --</option>
+                    {customers.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} {c.company ? `(${c.company})` : ''} - {c.phone}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Row 3: Product Details */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700">Product Name (পণ্যের নাম)</label>
+                  <input
+                    type="text"
+                    required
+                    value={returnProductName}
+                    onChange={(e) => setReturnProductName(e.target.value)}
+                    placeholder="e.g. Hitachi Air Filter"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-semibold"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700">Parts Number / SKU (পার্টস নং)</label>
+                  <input
+                    type="text"
+                    value={returnSku}
+                    onChange={(e) => setReturnSku(e.target.value)}
+                    placeholder="e.g. 52322330"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-mono font-semibold"
+                  />
+                </div>
+              </div>
+
+              {/* Row 4: Quantity & Pricing */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700">Quantity (পরিমাণ)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    required
+                    value={returnQuantity}
+                    onChange={(e) => {
+                      const qty = Number(e.target.value) || 1;
+                      setReturnQuantity(qty);
+                      setReturnRefundAmount(qty * returnUnitPrice);
+                    }}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-bold text-center text-rose-700"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700">Unit Price (একক দর)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={returnUnitPrice}
+                    onChange={(e) => {
+                      const rate = Number(e.target.value) || 0;
+                      setReturnUnitPrice(rate);
+                      setReturnRefundAmount(returnQuantity * rate);
+                    }}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-bold text-right"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700">Total Refund / Val (টাকার অংক)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={returnRefundAmount}
+                    onChange={(e) => setReturnRefundAmount(Number(e.target.value) || 0)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-black text-right text-slate-900"
+                  />
+                </div>
+              </div>
+
+              {/* Checkboxes: Restock in Inventory & Deduct from Due */}
+              <div className="space-y-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <label className="flex items-center gap-2 cursor-pointer font-semibold text-slate-800">
+                  <input
+                    type="checkbox"
+                    checked={returnRestocked}
+                    onChange={(e) => setReturnRestocked(e.target.checked)}
+                    className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
+                  />
+                  <span className="flex items-center gap-1.5 text-emerald-800 font-bold">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    ইনভেন্টরিতে স্টক রি-স্টক করুন (Auto-Increase Inventory Stock)
+                  </span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer font-semibold text-slate-800">
+                  <input
+                    type="checkbox"
+                    checked={returnDeductDue}
+                    onChange={(e) => setReturnDeductDue(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                  />
+                  <span className="flex items-center gap-1.5 text-blue-900">
+                    ইনভয়েস বা কাস্টমারের বকেয়া থেকে সমন্বয় করুন (Deduct from Customer's Due Balance)
+                  </span>
+                </label>
+              </div>
+
+              {/* Reason */}
+              <div className="space-y-1">
+                <label className="font-bold text-slate-700">Return Reason (ফেরতের কারণ)</label>
+                <select
+                  value={returnReason}
+                  onChange={(e) => setReturnReason(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-semibold text-slate-800 focus:outline-hidden"
+                >
+                  <option value="Wrong Specification / সাইজ বা স্পেক অমিল">Wrong Specification / সাইজ বা স্পেক অমিল</option>
+                  <option value="Defective Product / ত্রুটিযুক্ত পণ্য">Defective Product / ত্রুটিযুক্ত পণ্য</option>
+                  <option value="Customer Order Cancelled / কাজ বাতিল">Customer Order Cancelled / কাজ বাতিল</option>
+                  <option value="Damaged in Delivery / পরিবহনে ক্ষতিগ্রস্থ">Damaged in Delivery / পরিবহনে ক্ষতিগ্রস্থ</option>
+                  <option value="Warranty Claim / ওয়ারেন্টি দাবী">Warranty Claim / ওয়ারেন্টি দাবী</option>
+                  <option value="Excess Order / অতিরিক্ত স্টক ফেরত">Excess Order / অতিরিক্ত স্টক ফেরত</option>
+                  <option value="Other Reason / অন্যান্য">Other Reason / অন্যান্য</option>
+                </select>
+              </div>
+
+              {/* Remarks */}
+              <div className="space-y-1">
+                <label className="font-bold text-slate-700">Notes / Remarks (মন্তব্য)</label>
+                <textarea
+                  rows={2}
+                  value={returnNotes}
+                  onChange={(e) => setReturnNotes(e.target.value)}
+                  placeholder="Additional details regarding this product return..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-semibold"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsReturnModalOpen(false)}
+                  className="px-4 py-2 text-slate-500 font-semibold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingReturn}
+                  className="px-5 py-2.5 bg-rose-700 hover:bg-rose-800 text-white font-bold uppercase tracking-wider rounded-lg shadow-xs cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  {isSubmittingReturn ? 'Processing...' : 'Submit & Restock (জমা দিন)'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

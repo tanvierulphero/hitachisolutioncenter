@@ -108,6 +108,7 @@ export default function DocumentCreator({
       type === 'OFFER_LETTER' ? settings.offerPrefix :
       type === 'QUOTATION' ? settings.quotePrefix :
       type === 'BILL' ? settings.billPrefix :
+      type === 'CHALLAN' ? 'JM/CH/2026/' :
       settings.invoicePrefix;
     
     setDocNumber(`${prefix}${randomId}`);
@@ -122,6 +123,11 @@ export default function DocumentCreator({
       setSubject('Quotation for Supply and Commissioning of Screw Air Compressor System');
       setOpeningParagraph('Thank you for giving us the opportunity to quote our high-performance industrial compressed air products. Below, please find our most competitive quotation for the supply, delivery, and setup of premium machinery.');
       setClosingParagraph('We hope this quotation is satisfactory and matches your budget rules. Feel free to contact our technical sales desk for any further explanations.');
+    } else if (type === 'CHALLAN') {
+      setStatus('Active');
+      setSubject('Delivery Challan for Machinery & Spare Parts');
+      setOpeningParagraph('Please receive the following genuine spare parts and equipment in good condition as per work order.');
+      setClosingParagraph('Received the above goods in sound and complete condition.');
     } else {
       setStatus('Unpaid');
       setSubject('');
@@ -136,7 +142,7 @@ export default function DocumentCreator({
       id: `item-${Date.now()}-${Math.random()}`,
       productId: productId || '',
       name: '',
-      brand: 'Hitachi',
+      brand: '',
       quantity: 1,
       price: 0,
       total: 0,
@@ -147,7 +153,7 @@ export default function DocumentCreator({
       const p = products.find(prod => prod.id === productId);
       if (p) {
         newItem.name = p.name;
-        newItem.brand = p.brand;
+        newItem.brand = p.sku || p.brand; // Parts Number
         newItem.price = p.price;
         newItem.unit = p.unit;
         newItem.total = p.price * 1;
@@ -167,7 +173,7 @@ export default function DocumentCreator({
       if (p) {
         item.productId = p.id;
         item.name = p.name;
-        item.brand = p.brand;
+        item.brand = p.sku || p.brand; // Parts Number
         item.price = p.price;
         item.unit = p.unit;
       } else {
@@ -341,10 +347,11 @@ export default function DocumentCreator({
                   disabled={!!editingDocument}
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 font-bold text-slate-800 focus:outline-hidden cursor-pointer"
                 >
-                  <option value="OFFER_LETTER">Offer Letter</option>
-                  <option value="QUOTATION">Quotation</option>
-                  <option value="INVOICE">Sales Invoice</option>
-                  <option value="BILL">Purchase Bill</option>
+                  <option value="OFFER_LETTER">Offer Letter (অফার লেটার)</option>
+                  <option value="QUOTATION">Quotation (কোটেশন)</option>
+                  <option value="CHALLAN">Delivery Challan (চালান)</option>
+                  <option value="INVOICE">Sales Invoice (বিক্রয় ইনভয়েস)</option>
+                  <option value="BILL">Purchase Bill (বিল)</option>
                 </select>
               </div>
 
@@ -634,7 +641,7 @@ export default function DocumentCreator({
                       <thead>
                         <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                           <th className="py-2.5 px-3">Description of Goods</th>
-                          <th className="py-2.5 px-3 w-28">Brand</th>
+                          <th className="py-2.5 px-3 w-32">Parts Number (পার্টস নং)</th>
                           <th className="py-2.5 px-3 w-16 text-center">Qty</th>
                           <th className="py-2.5 px-3 w-16 text-center">Unit</th>
                           <th className="py-2.5 px-3 w-28 text-right">Rate (BDT)</th>
@@ -657,14 +664,14 @@ export default function DocumentCreator({
                               />
                             </td>
 
-                            {/* Brand Origin */}
+                            {/* Parts Number / Brand */}
                             <td className="py-2 px-1">
                               <input
                                 type="text"
-                                placeholder="Brand Origin"
+                                placeholder="Parts No. / পার্টস নং"
                                 value={item.brand}
                                 onChange={(e) => handleItemChange(index, 'brand', e.target.value)}
-                                className="w-full bg-white border border-slate-200 rounded p-1.5 text-xs font-semibold"
+                                className="w-full bg-white border border-slate-200 rounded p-1.5 text-xs font-semibold font-mono"
                               />
                             </td>
 

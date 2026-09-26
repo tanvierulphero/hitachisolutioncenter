@@ -21,19 +21,32 @@ interface DueLedgerProps {
   documents: Document[];
   customers: Customer[];
   onUpdateDocument: (doc: Document) => void;
+  onBatchUpdateDocuments?: (docs: Document[]) => void;
   onViewDocument: (doc: Document) => void;
 }
 
-export default function DueLedger({ documents, customers, onUpdateDocument, onViewDocument }: DueLedgerProps) {
+export default function DueLedger({ documents, customers, onUpdateDocument, onBatchUpdateDocuments, onViewDocument }: DueLedgerProps) {
   const [activeSubTab, setActiveSubTab] = useState<'customers' | 'invoices'>('customers');
   const [customerSearch, setCustomerSearch] = useState('');
   const [invoiceSearch, setInvoiceSearch] = useState('');
   const [expandedCustomer, setExpandedCustomer] = useState<string | null>(null);
   
-  // Payment Collection Modal State
+  // Single Document Payment Collection Modal State
   const [collectingDoc, setCollectingDoc] = useState<Document | null>(null);
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const [paymentNotes, setPaymentNotes] = useState('');
+
+  // Company-Level Total Due Payment Modal State
+  const [collectingCompany, setCollectingCompany] = useState<{
+    customer: Customer;
+    totalDue: number;
+    documents: Document[];
+  } | null>(null);
+  const [companyPayAmount, setCompanyPayAmount] = useState<number>(0);
+  const [companyPayMethod, setCompanyPayMethod] = useState<'Cash' | 'Bank Transfer' | 'bKash/Nagad' | 'Cheque'>('Bank Transfer');
+  const [companyPayDate, setCompanyPayDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [companyPayNotes, setCompanyPayNotes] = useState('');
+  const [companyPayFeedback, setCompanyPayFeedback] = useState<string | null>(null);
 
   // Helper: Extract only Invoice & Bill documents
   const financialDocs = documents.filter(doc => doc.type === 'INVOICE' || doc.type === 'BILL');
@@ -144,6 +157,69 @@ export default function DueLedger({ documents, customers, onUpdateDocument, onVi
     setCollectingDoc(null);
     setPaymentAmount(0);
     setPaymentNotes('');
+  };
+
+  // Open Company Total Payment modal
+  const handleOpenCompanyPay = (item: { customer: Customer; due: number; documents: Document[] }) => {
+    setCollectingCompany({
+      customer: item.customer,
+      totalDue: item.due,
+      documents: item.documents
+    });
+    setCompanyPayAmount(item.due); // Default to full due
+    setCompanyPayMethod('Bank Transfer');
+    setCompanyPayDate(new Date().toISOString().split('T')[0]);
+    setCompanyPayNotes('');
+    setCompanyPayFeedback(null);
+  };
+
+  // Handle Company Total Payment submission (distributes payment across due invoices oldest first)
+  const handleCompanyPaySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!collectingCompany || companyPayAmount <= 0) return;
+
+    // Filter unpaid/partially paid documents and sort oldest first
+    const unpaidDocs = collectingCompany.documents
+      .filter(d => d.status !== 'Paid' && ((d.dueAmount !== undefined ? d.dueAmount : d.total) > 0))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    let remainingToApply = companyPayAmount;
+    const updatedDocs: Document[] = [];
+
+    for (const doc of unpaidDocs) {
+      if (remainingToApply <= 0) break;
+      const currentDue = doc.dueAmount !== undefined ? doc.dueAmount : doc.total;
+      const currentPaid = doc.paidAmount !== undefined ? doc.paidAmount : (doc.status === 'Paid' ? doc.total : 0);
+
+      if (currentDue <= 0) continue;
+
+      const paymentForThisDoc = Math.min(currentDue, remainingToApply);
+      const newDue = Math.max(0, currentDue - paymentForThisDoc);
+      const newPaid = currentPaid + paymentForThisDoc;
+      remainingToApply -= paymentForThisDoc;
+
+      const updatedDoc: Document = {
+        ...doc,
+        dueAmount: newDue,
+        paidAmount: newPaid,
+        status: newDue === 0 ? 'Paid' : 'Partially Paid',
+        notes: (doc.notes || '') + `\n[কোম্পানি বকেয়া জমা: ৳${paymentForThisDoc.toLocaleString()} via ${companyPayMethod} on ${companyPayDate} - ${companyPayNotes || 'Ledger payment'}]`
+      };
+      updatedDocs.push(updatedDoc);
+    }
+
+    if (onBatchUpdateDocuments && updatedDocs.length > 0) {
+      onBatchUpdateDocuments(updatedDocs);
+    } else {
+      updatedDocs.forEach(d => onUpdateDocument(d));
+    }
+
+    const remainingDue = Math.max(0, collectingCompany.totalDue - companyPayAmount);
+    setCompanyPayFeedback(`৳${companyPayAmount.toLocaleString()} সফলভাবে জমা নেওয়া হয়েছে! নতুন মোট বকেয়া: ৳${remainingDue.toLocaleString()}`);
+    setTimeout(() => {
+      setCollectingCompany(null);
+      setCompanyPayFeedback(null);
+    }, 1200);
   };
 
   return (
@@ -298,10 +374,21 @@ export default function DueLedger({ documents, customers, onUpdateDocument, onVi
                             <td className="py-4 px-4 font-mono font-bold text-slate-500">{item.customer.phone}</td>
                             <td className="py-4 px-4 text-right font-bold text-slate-900">৳{item.invoiced.toLocaleString()}</td>
                             <td className="py-4 px-4 text-right font-bold text-emerald-600">৳{item.paid.toLocaleString()}</td>
-                            <td className="py-4 px-4 text-right font-bold">
-                              <span className={item.due > 0 ? 'text-rose-600 bg-rose-50 px-2 py-1 rounded-md border border-rose-100' : 'text-slate-400'}>
-                                ৳{item.due.toLocaleString()}
-                              </span>
+                            <td className="py-4 px-4 text-right">
+                              {item.due > 0 ? (
+                                <div className="inline-block bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-lg text-right">
+                                  <span className="text-sm font-black text-rose-700 font-display block leading-tight">
+                                    ৳{item.due.toLocaleString()}
+                                  </span>
+                                  <span className="text-[9px] font-bold text-rose-500 uppercase tracking-wider block">
+                                    মোট বকেয়া
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="inline-block bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-md text-[10px] font-bold">
+                                  ✅ কোনো বকেয়া নেই
+                                </span>
+                              )}
                             </td>
                             <td className="py-4 px-4 text-center">
                               {item.overdueCount > 0 ? (
@@ -313,13 +400,25 @@ export default function DueLedger({ documents, customers, onUpdateDocument, onVi
                               )}
                             </td>
                             <td className="py-4 px-5 text-center">
-                              <button
-                                onClick={() => setExpandedCustomer(isExpanded ? null : item.customer.id)}
-                                className="inline-flex items-center gap-1 text-xs text-blue-900 hover:text-blue-950 hover:underline font-bold cursor-pointer"
-                              >
-                                {isExpanded ? 'Hide Details' : 'View Invoices'}
-                                {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                              </button>
+                              <div className="flex items-center justify-center gap-2">
+                                {item.due > 0 && (
+                                  <button
+                                    onClick={() => handleOpenCompanyPay(item)}
+                                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs shadow-2xs transition-colors cursor-pointer"
+                                    title="কোম্পানির মোট বকেয়া জমা গ্রহণ করুন"
+                                  >
+                                    <CreditCard className="w-3.5 h-3.5" />
+                                    জমা নিন
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => setExpandedCustomer(isExpanded ? null : item.customer.id)}
+                                  className="inline-flex items-center gap-1 text-xs text-blue-900 hover:text-blue-950 hover:underline font-bold cursor-pointer"
+                                >
+                                  {isExpanded ? 'Hide Details' : 'View Invoices'}
+                                  {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                                </button>
+                              </div>
                             </td>
                           </tr>
 
@@ -624,6 +723,162 @@ export default function DueLedger({ documents, customers, onUpdateDocument, onVi
                   className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-center font-bold uppercase rounded-lg transition-colors cursor-pointer shadow-xs"
                 >
                   Process Payment
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* COMPANY TOTAL DUE COLLECTION MODAL */}
+      {collectingCompany && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden animate-slide-up">
+            <div className="bg-gradient-to-r from-slate-900 to-blue-950 text-white p-5 flex justify-between items-center">
+              <div>
+                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest block mb-0.5">Company Due Ledger &bull; পেমেন্ট গ্রহণ</span>
+                <h3 className="font-extrabold font-display text-sm sm:text-base">
+                  {collectingCompany.customer.company || collectingCompany.customer.name}
+                </h3>
+                <p className="text-[11px] text-slate-300">
+                  Contact: {collectingCompany.customer.name} &bull; {collectingCompany.customer.phone}
+                </p>
+              </div>
+              <button 
+                onClick={() => setCollectingCompany(null)}
+                className="text-slate-400 hover:text-white font-bold bg-white/10 hover:bg-white/20 w-8 h-8 rounded-full flex items-center justify-center text-sm"
+              >
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleCompanyPaySubmit} className="p-6 space-y-4 text-xs font-semibold">
+              {companyPayFeedback && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-bold text-center animate-fade-in">
+                  {companyPayFeedback}
+                </div>
+              )}
+
+              {/* Total Balance Card */}
+              <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-bold uppercase text-[10px]">কোম্পানির মোট বকেয়া (Total Outstanding)</span>
+                  <span className="font-black text-rose-600 text-base font-display">
+                    ৳{collectingCompany.totalDue.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-slate-500 text-[11px]">
+                  <span>বকেয়া বিলের সংখ্যা (Unpaid Invoices)</span>
+                  <span className="font-bold text-slate-800 font-mono">
+                    {collectingCompany.documents.filter(d => d.status !== 'Paid').length} টি বিল
+                  </span>
+                </div>
+
+                {/* Quick amount setter buttons */}
+                <div className="pt-2 border-t border-slate-200 flex flex-wrap gap-2">
+                  <span className="text-[10px] text-slate-400 font-bold block w-full">দ্রুত সিলেক্ট করুন:</span>
+                  <button
+                    type="button"
+                    onClick={() => setCompanyPayAmount(collectingCompany.totalDue)}
+                    className="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-md text-[11px] font-bold cursor-pointer transition-colors"
+                  >
+                    সম্পূর্ণ জমা (৳{collectingCompany.totalDue.toLocaleString()})
+                  </button>
+                  {collectingCompany.totalDue > 5000 && (
+                    <button
+                      type="button"
+                      onClick={() => setCompanyPayAmount(Math.round(collectingCompany.totalDue * 0.5))}
+                      className="px-2.5 py-1 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-md text-[11px] font-bold cursor-pointer transition-colors"
+                    >
+                      ৫০% জমা (৳{Math.round(collectingCompany.totalDue * 0.5).toLocaleString()})
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Payment Amount Input */}
+              <div className="space-y-1">
+                <label className="text-slate-800 font-bold block flex justify-between items-center">
+                  <span>জমা টাকা (Payment Amount ৳) <span className="text-rose-600">*</span></span>
+                  {companyPayAmount > 0 && (
+                    <span className="text-[10px] text-slate-500 font-normal">
+                      অবশিষ্ট বকেয়া থাকবে: <strong className="text-rose-600">৳{Math.max(0, collectingCompany.totalDue - companyPayAmount).toLocaleString()}</strong>
+                    </span>
+                  )}
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-base font-display">৳</span>
+                  <input
+                    type="number"
+                    required
+                    min={1}
+                    max={collectingCompany.totalDue}
+                    value={companyPayAmount || ''}
+                    onChange={(e) => setCompanyPayAmount(Number(e.target.value))}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 pl-7 focus:bg-white focus:outline-hidden font-bold text-slate-900 text-base font-mono"
+                    placeholder="জমা টাকা লিখুন..."
+                  />
+                </div>
+                <p className="text-[10px] text-slate-400 leading-tight">
+                  জমা টাকা স্বয়ংক্রিয়ভাবে কোম্পানির বকেয়া ভাউচারগুলোর (পূর্বের থেকে বর্তমান) সাথে সমন্বয় হয়ে মোট ডিউ কমে যাবে।
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Payment Method */}
+                <div className="space-y-1">
+                  <label className="text-slate-700 font-bold block">পেমেন্ট মেথড (Payment Method)</label>
+                  <select
+                    value={companyPayMethod}
+                    onChange={(e) => setCompanyPayMethod(e.target.value as any)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-bold text-slate-800 focus:bg-white focus:outline-hidden"
+                  >
+                    <option value="Cash">Cash (নগদ)</option>
+                    <option value="Bank Transfer">Bank Transfer (ব্যাংক)</option>
+                    <option value="bKash/Nagad">bKash / Nagad</option>
+                    <option value="Cheque">Cheque (চেক)</option>
+                  </select>
+                </div>
+
+                {/* Date */}
+                <div className="space-y-1">
+                  <label className="text-slate-700 font-bold block">জমার তারিখ (Payment Date)</label>
+                  <input
+                    type="date"
+                    required
+                    value={companyPayDate}
+                    onChange={(e) => setCompanyPayDate(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:bg-white focus:outline-hidden"
+                  />
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div className="space-y-1">
+                <label className="text-slate-700 font-bold block">মন্তব্য / ভাউচার রেফারেন্স (Notes)</label>
+                <input
+                  type="text"
+                  placeholder="যেমন: ব্যাংক ট্রানজেকশন আইডি বা নগদ গ্রহণ রসিদ নং"
+                  value={companyPayNotes}
+                  onChange={(e) => setCompanyPayNotes(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:bg-white focus:outline-hidden"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setCollectingCompany(null)}
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-center rounded-lg transition-colors cursor-pointer"
+                >
+                  বাতিল (Dismiss)
+                </button>
+                <button
+                  type="submit"
+                  disabled={companyPayAmount <= 0}
+                  className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-center font-bold uppercase rounded-lg transition-colors cursor-pointer shadow-xs"
+                >
+                  জমা নিশ্চিত করুন (৳{companyPayAmount.toLocaleString()})
                 </button>
               </div>
             </form>

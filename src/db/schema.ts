@@ -16,6 +16,7 @@ export const products = pgTable('products', {
   category: text('category').notNull(),
   brand: text('brand').notNull(),
   price: real('price').notNull(),
+  costPrice: real('cost_price').default(0),
   stock: integer('stock').notNull(),
   unit: text('unit').notNull(),
   description: text('description').default(''),
@@ -202,6 +203,33 @@ export const purchases = pgTable('purchases', {
   paymentStatus: text('payment_status').notNull(), // 'Paid' | 'Partial' | 'Due'
   paymentMethod: text('payment_method').notNull(), // 'Cash' | 'Bank Transfer' | 'bKash/Nagad' | 'Cheque'
   status: text('status').notNull(), // 'Received' | 'Ordered' | 'Pending' | 'Cancelled'
+  notes: text('notes').default(''),
+  createdAt: text('created_at').default(''),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// Sales Returns / Restock table
+export const salesReturns = pgTable('sales_returns', {
+  id: text('id').primaryKey().notNull(),
+  returnNumber: text('return_number').notNull(),
+  returnDate: text('return_date').notNull(),
+  originalDocId: text('original_doc_id').default(''),
+  originalDocNumber: text('original_doc_number').default(''),
+  customerId: text('customer_id').notNull(),
+  customerName: text('customer_name').notNull(),
+  customerCompany: text('customer_company').default(''),
+  customerPhone: text('customer_phone').default(''),
+  productId: text('product_id').notNull(),
+  productName: text('product_name').notNull(),
+  sku: text('sku').default(''),
+  partsNumber: text('parts_number').default(''),
+  quantity: integer('quantity').notNull(),
+  unit: text('unit').notNull(),
+  unitPrice: real('unit_price').notNull(),
+  refundAmount: real('refund_amount').default(0),
+  deductFromDue: integer('deduct_from_due').default(1), // 1 for true, 0 for false
+  restocked: integer('restocked').default(1),
+  reason: text('reason').default(''),
   notes: text('notes').default(''),
   createdAt: text('created_at').default(''),
   updatedAt: timestamp('updated_at').defaultNow(),

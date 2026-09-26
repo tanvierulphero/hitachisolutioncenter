@@ -118,6 +118,7 @@ export default function InventoryManager({
     category: string;
     brand: string;
     price: number;
+    costPrice: number;
     stock: number;
     unit: string;
     description: string;
@@ -129,6 +130,7 @@ export default function InventoryManager({
     category: 'Screw Air Compressor',
     brand: 'Hitachi',
     price: 0,
+    costPrice: 0,
     stock: 0,
     unit: 'Pcs',
     description: '',
@@ -295,9 +297,10 @@ export default function InventoryManager({
     setFormData({
       name: '',
       sku: '',
-      category: 'Screw Air Compressor',
+      category: 'Spare Parts',
       brand: 'Hitachi',
       price: 0,
+      costPrice: 0,
       stock: 0,
       unit: 'Pcs',
       description: '',
@@ -316,6 +319,7 @@ export default function InventoryManager({
       category: product.category,
       brand: product.brand,
       price: product.price,
+      costPrice: product.costPrice ?? Math.round(product.price * 0.75),
       stock: product.stock,
       unit: product.unit,
       description: product.description,
@@ -419,8 +423,8 @@ export default function InventoryManager({
                 <th className="py-3 px-4">Item SKU / Name</th>
                 <th className="py-3 px-3">Category</th>
                 <th className="py-3 px-3">Brand</th>
-                <th className="py-3 px-3 text-right">Standard Price</th>
-                <th className="py-3 px-4 text-center">Stock Volume</th>
+                <th className="py-3 px-3 text-right">Selling & Purchase Price (বিক্রয় ও ক্রয়)</th>
+                <th className="py-3 px-4 text-center">Stock Volume (মজুদ)</th>
                 <th className="py-3 px-3 text-center">Status</th>
                 <th className="py-3 px-4 text-right">Operations</th>
               </tr>
@@ -431,6 +435,7 @@ export default function InventoryManager({
                   if (!product) return null;
                   const prodStock = Number(product.stock) || 0;
                   const prodPrice = Number(product.price) || 0;
+                  const prodCost = Number(product.costPrice) || Math.round(prodPrice * 0.75);
                   const prodUnit = product.unit || 'Pcs';
                   const isLowStock = prodStock < 5;
 
@@ -456,36 +461,26 @@ export default function InventoryManager({
                         </span>
                       </td>
 
-                      {/* Price */}
-                      <td className="py-3.5 px-3 text-right font-extrabold text-slate-900 font-display">
-                        ৳{prodPrice.toLocaleString()} / {prodUnit}
+                      {/* Price: Selling Price & Purchase Price */}
+                      <td className="py-3.5 px-3 text-right">
+                        <div className="font-extrabold text-slate-900 font-display text-xs">
+                          ৳{prodPrice.toLocaleString()} <span className="text-[10px] font-normal text-slate-400">/ {prodUnit}</span>
+                        </div>
+                        <div className="text-[10px] font-bold text-emerald-700 bg-emerald-50 inline-block px-1.5 py-0.5 rounded border border-emerald-200 mt-0.5" title="ক্রয় মূল্য (Purchase Cost)">
+                          ক্রয়: ৳{prodCost.toLocaleString()}
+                        </div>
                       </td>
 
-                      {/* Stock with adjustment controls */}
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center justify-center gap-2">
-                          {/* Decrement */}
-                          <button
-                            onClick={() => handleQuickStock(product, -1)}
-                            className="w-6 h-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded flex items-center justify-center cursor-pointer"
-                            title="Decrease Stock"
-                          >
-                            -
-                          </button>
-                          
-                          {/* Stock display */}
-                          <span className={`w-10 text-center font-extrabold text-sm ${isLowStock ? 'text-rose-600 font-display' : 'text-slate-900'}`}>
-                            {prodStock}
+                      {/* Stock Volume (Read-only: manual +/- stopped as requested) */}
+                      <td className="py-3.5 px-4 text-center">
+                        <div className="inline-flex flex-col items-center">
+                          <span className={`px-2.5 py-1 rounded-lg font-black text-xs font-mono border ${
+                            prodStock === 0 ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                            isLowStock ? 'bg-amber-50 text-amber-700 border-amber-200 font-display' :
+                            'bg-slate-100 text-slate-900 border-slate-200'
+                          }`}>
+                            {prodStock} {prodUnit}
                           </span>
-
-                          {/* Increment */}
-                          <button
-                            onClick={() => handleQuickStock(product, 1)}
-                            className="w-6 h-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded flex items-center justify-center cursor-pointer"
-                            title="Increase Stock"
-                          >
-                            +
-                          </button>
                         </div>
                       </td>
 
@@ -637,29 +632,62 @@ export default function InventoryManager({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Price (Taka BDT) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* Selling Price (বিক্রয় মূল্য) */}
                 <div className="space-y-1.5">
-                  <label className="font-bold text-slate-700">Est Price in BDT (Taka)</label>
+                  <label className="font-bold text-slate-700 flex items-center justify-between">
+                    <span>বিক্রয় মূল্য (Selling Price ৳)</span>
+                  </label>
                   <input
                     type="number"
                     min={0}
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:bg-white focus:outline-hidden"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:bg-white focus:outline-hidden font-bold text-blue-900"
+                    placeholder="0"
+                  />
+                </div>
+
+                {/* Purchase Cost (ক্রয় মূল্য) */}
+                <div className="space-y-1.5">
+                  <label className="font-bold text-slate-700 flex items-center justify-between">
+                    <span>ক্রয় মূল্য (Purchase Cost ৳)</span>
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={formData.costPrice}
+                    onChange={(e) => setFormData({ ...formData, costPrice: Number(e.target.value) })}
+                    className="w-full bg-slate-50 border border-emerald-200 rounded-lg p-2.5 focus:bg-white focus:outline-hidden font-bold text-emerald-700"
+                    placeholder="0"
                   />
                 </div>
 
                 {/* Stock volume */}
                 <div className="space-y-1.5">
-                  <label className="font-bold text-slate-700">Initial Stock Volume</label>
+                  <label className="font-bold text-slate-700 flex items-center justify-between">
+                    <span>স্টক পরিমাণ (Stock)</span>
+                    {editingId && (
+                      <span className="text-[9px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded font-normal">
+                        অটো-আপডেট
+                      </span>
+                    )}
+                  </label>
                   <input
                     type="number"
                     min={0}
+                    disabled={!!editingId}
                     value={formData.stock}
                     onChange={(e) => setFormData({ ...formData, stock: Number(e.target.value) })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:bg-white focus:outline-hidden"
+                    className={`w-full border rounded-lg p-2.5 font-bold ${
+                      editingId ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed' : 'bg-slate-50 border-slate-200 focus:bg-white focus:outline-hidden'
+                    }`}
                   />
+                  {editingId && (
+                    <p className="text-[10px] text-slate-400 leading-tight">
+                      ক্রয় ভাউচার, সেলস চালান ও রিটার্নের মাধ্যমে স্টক নিয়ন্ত্রিত হয়।
+                    </p>
+                  )}
                 </div>
               </div>
 

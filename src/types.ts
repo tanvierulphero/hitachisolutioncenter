@@ -10,6 +10,7 @@ export interface Product {
   category: string;
   brand: string;
   price: number;
+  costPrice?: number; // ক্রয় মূল্য / Buying Cost
   stock: number;
   unit: string;
   description: string;
@@ -29,7 +30,33 @@ export interface Customer {
   notes?: string;
 }
 
-export type DocumentType = 'OFFER_LETTER' | 'QUOTATION' | 'BILL' | 'INVOICE';
+export type DocumentType = 'OFFER_LETTER' | 'QUOTATION' | 'BILL' | 'INVOICE' | 'CHALLAN';
+
+export interface SalesReturn {
+  id: string;
+  returnNumber: string; // e.g. RET/2026/001
+  returnDate: string;   // e.g. 2026-09-26
+  originalDocId?: string;
+  originalDocNumber?: string;
+  customerId: string;
+  customerName: string;
+  customerCompany?: string;
+  customerPhone?: string;
+  productId: string;
+  productName: string;
+  sku?: string;
+  partsNumber?: string;
+  brand?: string;
+  quantity: number;
+  unit: string;
+  unitPrice: number;
+  refundAmount: number;
+  deductFromDue: boolean;
+  restocked: boolean;
+  reason: string;
+  notes?: string;
+  createdAt?: string;
+}
 
 export type DocumentStatus = 
   | 'Draft' 
