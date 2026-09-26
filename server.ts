@@ -38,11 +38,11 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB
 });
 
 app.use('/uploads', express.static(uploadsDir));
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '25mb' }));
 
 // Upload image handler for Node server
 const handleUpload = (req: express.Request, res: express.Response) => {
@@ -53,8 +53,25 @@ const handleUpload = (req: express.Request, res: express.Response) => {
   res.json({ url: fileUrl, success: true });
 };
 
-app.post('/api/upload', upload.single('file'), handleUpload);
-app.post('/api/upload.php', upload.single('file'), handleUpload);
+app.post('/api/upload', (req, res, next) => {
+  upload.single('file')(req, res, (err) => {
+    if (err) {
+      console.error('Multer upload error:', err);
+      return res.status(400).json({ error: err.message || 'File upload error' });
+    }
+    handleUpload(req, res);
+  });
+});
+
+app.post('/api/upload.php', (req, res, next) => {
+  upload.single('file')(req, res, (err) => {
+    if (err) {
+      console.error('Multer upload error:', err);
+      return res.status(400).json({ error: err.message || 'File upload error' });
+    }
+    handleUpload(req, res);
+  });
+});
 
 // Helper to broadcast changes instantly
 function notifyChange(entity: string, action: string, data?: any) {

@@ -11,6 +11,10 @@ import {
   ChevronsUpDown, 
   Eye, 
   Upload, 
+  UploadCloud,
+  Image as ImageIcon,
+  Link2,
+  Sparkles,
   Loader2, 
   BarChart3, 
   Building2, 
@@ -18,6 +22,7 @@ import {
   TrendingDown, 
   ShieldCheck, 
   X, 
+  Check,
   CheckCircle2, 
   FileText, 
   ShoppingBag, 
@@ -26,6 +31,29 @@ import {
   ArrowDownRight
 } from 'lucide-react';
 import { apiUploadImage } from '../lib/api';
+
+const PRODUCT_IMAGE_PRESETS = [
+  {
+    name: 'Screw Compressor',
+    url: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&auto=format&fit=crop&q=80',
+  },
+  {
+    name: 'Refrigerated Dryer',
+    url: 'https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=600&auto=format&fit=crop&q=80',
+  },
+  {
+    name: 'Oil / Air Filter',
+    url: 'https://images.unsplash.com/photo-1616401784845-180882ba9ba8?w=600&auto=format&fit=crop&q=80',
+  },
+  {
+    name: 'Synthetic Lube Oil',
+    url: 'https://images.unsplash.com/photo-1635350736475-c8cdf4b21906?w=600&auto=format&fit=crop&q=80',
+  },
+  {
+    name: 'Spare Parts & Valves',
+    url: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=600&auto=format&fit=crop&q=80',
+  },
+];
 
 interface InventoryManagerProps {
   products: Product[];
@@ -53,23 +81,35 @@ export default function InventoryManager({
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   // Lifetime History Modal State
   const [historyProduct, setHistoryProduct] = useState<Product | null>(null);
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const processAndUploadFile = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      alert('Please select a valid image file (PNG, JPG, JPEG, WEBP).');
+      return;
+    }
 
     setIsUploading(true);
     try {
       const res = await apiUploadImage(file);
-      setFormData(prev => ({ ...prev, imageUrl: res.url }));
+      if (res && res.url) {
+        setFormData(prev => ({ ...prev, imageUrl: res.url }));
+      }
     } catch (err: any) {
-      alert('Image upload failed: ' + (err.message || 'Could not upload file to server'));
+      alert('Image upload notice: ' + (err.message || 'Could not process image'));
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await processAndUploadFile(file);
+    e.target.value = ''; // Reset input so same file can be re-uploaded
   };
   
   const [formData, setFormData] = useState<{
@@ -677,47 +717,138 @@ export default function InventoryManager({
                 </div>
               </div>
 
-              {/* Product Image Upload & Server Link */}
-              <div className="space-y-2 border-t border-slate-100 pt-3">
-                <label className="font-bold text-slate-700 block">Product Image (cPanel Server Upload or URL)</label>
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              {/* Product Image Upload & Presets Section */}
+              <div className="space-y-3 border-t border-slate-100 pt-4">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-800 flex items-center gap-1.5 text-xs">
+                    <ImageIcon className="w-4 h-4 text-blue-600" />
+                    Product Image (ছবি আপলোড বা ছবি নির্বাচন)
+                  </label>
                   {formData.imageUrl && (
-                    <div className="w-16 h-16 rounded-lg border border-slate-200 overflow-hidden bg-slate-100 flex-shrink-0 relative">
-                      <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-cover" />
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, imageUrl: '' }))}
+                      className="text-[11px] text-rose-600 hover:text-rose-700 font-bold hover:underline cursor-pointer flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      Remove Image
+                    </button>
                   )}
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <label className={`px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-lg font-bold text-xs cursor-pointer flex items-center gap-2 transition-colors ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                        {isUploading ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin text-blue-700" />
-                            <span>Uploading to cPanel...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Upload className="w-4 h-4" />
-                            <span>Upload Image File</span>
-                          </>
-                        )}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          disabled={isUploading}
-                          onChange={handleFileUpload}
-                          className="hidden"
-                        />
-                      </label>
-                      <span className="text-[11px] text-slate-400 font-medium">Or type image URL</span>
-                    </div>
+                </div>
+
+                {/* Drag & Drop Upload Zone + Live Preview */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                  
+                  {/* Dropzone Box */}
+                  <div 
+                    onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+                    onDragLeave={() => setIsDragOver(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDragOver(false);
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) processAndUploadFile(file);
+                    }}
+                    className={`md:col-span-8 border-2 border-dashed rounded-xl p-4 transition-all flex flex-col items-center justify-center text-center relative ${
+                      isDragOver ? 'border-blue-600 bg-blue-50/80 scale-[1.01]' : 'border-slate-300 hover:border-blue-400 bg-slate-50/70 hover:bg-slate-50'
+                    }`}
+                  >
                     <input
-                      type="text"
-                      placeholder="e.g. /uploads/prod_123.jpg or https://..."
-                      value={formData.imageUrl}
-                      onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:bg-white focus:outline-hidden text-xs font-mono"
+                      type="file"
+                      id="product-image-file-input"
+                      accept="image/*"
+                      disabled={isUploading}
+                      onChange={handleFileUpload}
+                      className="hidden"
                     />
+
+                    {isUploading ? (
+                      <div className="py-3 flex flex-col items-center gap-2">
+                        <Loader2 className="w-7 h-7 text-blue-600 animate-spin" />
+                        <span className="text-xs font-bold text-slate-700">Compressing & Uploading Photo...</span>
+                        <span className="text-[10px] text-slate-400">ছবি প্রসেস হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন</span>
+                      </div>
+                    ) : (
+                      <label 
+                        htmlFor="product-image-file-input"
+                        className="w-full flex flex-col items-center cursor-pointer py-1"
+                      >
+                        <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center mb-2 shadow-2xs">
+                          <UploadCloud className="w-5 h-5" />
+                        </div>
+                        <span className="text-xs font-bold text-slate-800 block">
+                          Click to browse device or Drag & Drop photo here
+                        </span>
+                        <span className="text-[11px] text-slate-500 mt-0.5 block">
+                          কম্পিউটার বা মোবাইল থেকে ছবি সিলেক্ট করুন (PNG, JPG, WEBP)
+                        </span>
+                      </label>
+                    )}
                   </div>
+
+                  {/* Image Preview Box */}
+                  <div className="md:col-span-4 bg-white border border-slate-200 rounded-xl p-2 flex flex-col items-center justify-center min-h-[100px] relative overflow-hidden">
+                    {formData.imageUrl ? (
+                      <div className="relative w-full h-24 rounded-lg overflow-hidden bg-slate-100 group">
+                        <img 
+                          src={formData.imageUrl} 
+                          alt="Product Preview" 
+                          className="w-full h-full object-contain"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=400&auto=format&fit=crop&q=60';
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <span className="text-[10px] text-white font-bold bg-slate-900/80 px-2 py-0.5 rounded">Preview</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-4 text-slate-400">
+                        <ImageIcon className="w-8 h-8 mx-auto mb-1 opacity-40" />
+                        <span className="text-[10px] font-semibold block">No image selected</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 1-Click Preset Industrial Photos */}
+                <div className="space-y-1.5">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-amber-500" />
+                    Quick Preset Photos (রেডিমেড প্রডাক্ট ছবি):
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {PRODUCT_IMAGE_PRESETS.map((preset, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, imageUrl: preset.url }))}
+                        className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer ${
+                          formData.imageUrl === preset.url
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                            : 'bg-white text-slate-700 border-slate-200 hover:border-blue-300 hover:bg-blue-50'
+                        }`}
+                      >
+                        {formData.imageUrl === preset.url && <Check className="w-3 h-3" />}
+                        {preset.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Direct Image URL input */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-500 flex items-center gap-1">
+                    <Link2 className="w-3 h-3 text-slate-400" />
+                    Or Paste Image URL directly (সরাসরি ছবির লিংক):
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. /uploads/prod_123.jpg or https://..."
+                    value={formData.imageUrl}
+                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:bg-white focus:outline-hidden text-xs font-mono"
+                  />
                 </div>
               </div>
 

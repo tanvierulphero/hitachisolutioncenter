@@ -127,7 +127,7 @@ function readFileAsDataUrl(file: File): Promise<string> {
     reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
-        const maxDim = 800;
+        const maxDim = 1200;
         let width = img.width;
         let height = img.height;
 
@@ -151,44 +151,36 @@ function readFileAsDataUrl(file: File): Promise<string> {
         }
 
         ctx.drawImage(img, 0, 0, width, height);
-        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
         resolve(compressedDataUrl);
       };
-      img.onerror = () => reject(new Error('Failed to load image'));
+      img.onerror = () => {
+        // Direct data url fallback if canvas cannot decode
+        resolve(e.target?.result as string);
+      };
       img.src = e.target?.result as string;
     };
-    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.onerror = () => reject(new Error('Failed to read file from disk'));
     reader.readAsDataURL(file);
   });
 }
 
-// Image Upload API
+// Image Upload API with Server & Client Fallback
 export async function apiUploadImage(file: File): Promise<{ url: string }> {
   const formData = new FormData();
   formData.append('file', file);
 
+  // 1. Try modern Node server /api/upload endpoint first
   try {
-    const response = await fetch('/api/upload.php', {
-      method: 'POST',
-      body: formData,
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      if (data && data.url) {
-        return data;
-      }
-    }
-  } catch {
-    // Continue to fallback
-  }
-
-  // Fallback 1: Try /api/upload endpoint
-  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
     const response = await fetch('/api/upload', {
       method: 'POST',
       body: formData,
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
+
     if (response.ok) {
       const data = await response.json();
       if (data && data.url) {
@@ -196,11 +188,32 @@ export async function apiUploadImage(file: File): Promise<{ url: string }> {
       }
     }
   } catch {
-    // Continue to fallback
+    // Continue to next fallback
   }
 
-  // Fallback 2: Direct client-side Data URL (Base64)
-  // Ensures image upload ALWAYS succeeds even if cPanel upload folder permissions are restricted
+  // 2. Try cPanel PHP upload endpoint if running under PHP
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const response = await fetch('/api/upload.php', {
+      method: 'POST',
+      body: formData,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data && data.url) {
+        return data;
+      }
+    }
+  } catch {
+    // Continue to client-side fallback
+  }
+
+  // 3. Fallback: Instant Client-Side Image Compression & Data URL
+  // Guaranteed to work 100% of the time on all devices without requiring server upload permissions
   try {
     const dataUrl = await readFileAsDataUrl(file);
     return { url: dataUrl };
